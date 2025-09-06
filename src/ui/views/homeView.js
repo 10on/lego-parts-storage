@@ -34,6 +34,7 @@ class HomeView {
         const stats = this.calculateContainerStats(container);
         const typeIcon = this.getTypeIcon(container.type);
         const lastUpdated = new Date(container.updatedAt).toLocaleDateString('ru-RU');
+        const containerColor = container.color || '#e0e0e0';
 
         return `
             <div class="container-card" data-container-id="${container.id}">
@@ -47,6 +48,9 @@ class HomeView {
                             🗑️
                         </button>
                     </div>
+                </div>
+                <div class="container-visualization">
+                    ${this.renderContainerGrid(container, containerColor)}
                 </div>
                 <p class="container-description">${this.getTypeDescription(container.type)}</p>
                 <div class="container-stats">
@@ -92,6 +96,62 @@ class HomeView {
             'pile': '📚'
         };
         return icons[type] || '📦';
+    }
+
+    renderContainerGrid(container, color) {
+        const { rows, cols, cells } = container;
+        const borderColor = this.darkenColor(color, 20);
+        
+        // Ограничиваем размер для карточки (максимум 6x8)
+        const maxRows = Math.min(rows, 6);
+        const maxCols = Math.min(cols, 8);
+        
+        let gridHtml = `
+            <div class="container-grid-preview" 
+                 style="grid-template-columns: repeat(${maxCols}, 1fr); 
+                        grid-template-rows: repeat(${maxRows}, 1fr);
+                        background-color: ${color};
+                        border: 2px solid ${borderColor};">
+        `;
+        
+        // Создаем ячейки
+        for (let row = 0; row < maxRows; row++) {
+            for (let col = 0; col < maxCols; col++) {
+                const cellIndex = row * cols + col;
+                const cell = cells[cellIndex];
+                const isFilled = cell !== null;
+                
+                gridHtml += `
+                    <div class="preview-cell ${isFilled ? 'filled' : 'empty'}" 
+                         style="background-color: ${isFilled ? '#fff' : 'transparent'};
+                                border: 1px solid ${this.darkenColor(color, 10)};
+                                min-height: 8px;
+                                min-width: 8px;">
+                        ${isFilled ? '●' : ''}
+                    </div>
+                `;
+            }
+        }
+        
+        gridHtml += '</div>';
+        
+        // Показываем информацию о размере, если сетка обрезана
+        if (rows > maxRows || cols > maxCols) {
+            gridHtml += `<div class="grid-size-info">Показано ${maxRows}×${maxCols} из ${rows}×${cols}</div>`;
+        }
+        
+        return gridHtml;
+    }
+    
+    darkenColor(color, percent) {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) - amt;
+        const G = (num >> 8 & 0x00FF) - amt;
+        const B = (num & 0x0000FF) - amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
     }
 
     getTypeDescription(type) {

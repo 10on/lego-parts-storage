@@ -187,6 +187,18 @@ class LegoStorageApp {
                     </div>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Цвет контейнера</label>
+                    <div class="color-picker-container">
+                        <input type="color" class="color-picker" id="container-color" value="#e0e0e0">
+                        <input type="text" class="form-input color-input" id="container-color-hex" placeholder="#e0e0e0" value="#e0e0e0">
+                        <button type="button" class="btn btn-outline btn-sm" id="clear-color">Очистить</button>
+                    </div>
+                    <div class="color-preview" id="color-preview">
+                        <div class="preview-label">Предпросмотр:</div>
+                        <div class="preview-grid" id="preview-grid"></div>
+                    </div>
+                </div>
+                <div class="form-group">
                     <button type="submit" class="btn btn-primary">Создать контейнер</button>
                 </div>
             </form>
@@ -199,6 +211,85 @@ class LegoStorageApp {
             e.preventDefault();
             this.createContainer();
         });
+        
+        // Обработчики color picker
+        this.setupColorPicker();
+    }
+
+    setupColorPicker() {
+        const colorPicker = document.getElementById('container-color');
+        const colorInput = document.getElementById('container-color-hex');
+        const clearBtn = document.getElementById('clear-color');
+        const rowsInput = document.getElementById('grid-rows');
+        const colsInput = document.getElementById('grid-cols');
+        
+        // Синхронизация color picker и text input
+        colorPicker.addEventListener('input', (e) => {
+            colorInput.value = e.target.value;
+            this.updateColorPreview();
+        });
+        
+        colorInput.addEventListener('input', (e) => {
+            if (this.isValidHex(e.target.value)) {
+                colorPicker.value = e.target.value;
+                this.updateColorPreview();
+            }
+        });
+        
+        // Кнопка очистки цвета
+        clearBtn.addEventListener('click', () => {
+            colorPicker.value = '#e0e0e0';
+            colorInput.value = '#e0e0e0';
+            this.updateColorPreview();
+        });
+        
+        // Обновление предпросмотра при изменении размера
+        rowsInput.addEventListener('input', () => this.updateColorPreview());
+        colsInput.addEventListener('input', () => this.updateColorPreview());
+        
+        // Начальный предпросмотр
+        this.updateColorPreview();
+    }
+    
+    isValidHex(hex) {
+        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
+    }
+    
+    updateColorPreview() {
+        const rows = parseInt(document.getElementById('grid-rows').value) || 6;
+        const cols = parseInt(document.getElementById('grid-cols').value) || 8;
+        const color = document.getElementById('container-color').value;
+        const previewGrid = document.getElementById('preview-grid');
+        
+        if (!previewGrid) return;
+        
+        previewGrid.innerHTML = '';
+        previewGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        previewGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        previewGrid.style.backgroundColor = color;
+        previewGrid.style.border = `2px solid ${this.darkenColor(color, 20)}`;
+        
+        // Создаем ячейки
+        for (let i = 0; i < rows * cols; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'preview-cell';
+            cell.style.backgroundColor = 'white';
+            cell.style.border = '1px solid #ddd';
+            cell.style.minHeight = '8px';
+            cell.style.minWidth = '8px';
+            previewGrid.appendChild(cell);
+        }
+    }
+    
+    darkenColor(color, percent) {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) - amt;
+        const G = (num >> 8 & 0x00FF) - amt;
+        const B = (num & 0x0000FF) - amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
     }
 
     async createContainer() {
@@ -206,6 +297,7 @@ class LegoStorageApp {
         const type = document.getElementById('container-type').value;
         const rows = parseInt(document.getElementById('grid-rows').value);
         const cols = parseInt(document.getElementById('grid-cols').value);
+        const color = document.getElementById('container-color').value;
         
         const container = {
             id: Date.now().toString(),
@@ -213,6 +305,7 @@ class LegoStorageApp {
             type,
             rows,
             cols,
+            color,
             cells: Array(rows * cols).fill(null),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()

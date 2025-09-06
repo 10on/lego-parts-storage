@@ -21,6 +21,7 @@ class MockData {
                 type: 'cabinet',
                 rows: 6,
                 cols: 8,
+                color: '#e3f2fd',
                 cells: this.generateMockCells(6, 8),
                 createdAt: '2024-01-15T10:00:00Z',
                 updatedAt: '2024-01-20T15:30:00Z'
@@ -31,6 +32,7 @@ class MockData {
                 type: 'box',
                 rows: 4,
                 cols: 6,
+                color: '#f3e5f5',
                 cells: this.generateMockCells(4, 6),
                 createdAt: '2024-01-16T09:15:00Z',
                 updatedAt: '2024-01-19T12:45:00Z'
@@ -41,6 +43,7 @@ class MockData {
                 type: 'pile',
                 rows: 1,
                 cols: 1,
+                color: '#fff3e0',
                 cells: [],
                 createdAt: '2024-01-18T14:20:00Z',
                 updatedAt: '2024-01-20T16:10:00Z'
