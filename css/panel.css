@@ -238,6 +238,36 @@
     transform: scale(1.02);
 }
 
+/* Объединённые ячейки в SplitView */
+.grid-cell-split.merged {
+    position: relative;
+    z-index: 1;
+    min-height: 60px;
+    min-width: 80px;
+}
+
+.grid-cell-split.merged.empty {
+    background-color: var(--bg-primary);
+    border-style: dashed;
+    border-color: var(--text-muted);
+}
+
+.grid-cell-split.merged.empty:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.grid-cell-split.merged.empty::after {
+    content: '+';
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    font-weight: 300;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
 .cell-empty {
     font-size: 1.5rem;
     font-weight: 300;

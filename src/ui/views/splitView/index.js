@@ -111,17 +111,34 @@ class SplitView {
             for (let col = 0; col < cols; col++) {
                 const cellIndex = row * cols + col;
                 const cell = cells[cellIndex];
+                
+                // Пропускаем ячейки, которые являются частью объединения (но не первой)
+                if (this.isCellPartOfMerge(cellIndex, cells)) {
+                    continue;
+                }
+                
                 const isEmpty = !cell || !cell.items || cell.items.length === 0;
                 
                 const isSelected = this.selectedCell && 
                     this.selectedCell.containerId === container.id && 
                     this.selectedCell.cellIndex === cellIndex;
                 
+                const cellClasses = [
+                    'grid-cell-split',
+                    isEmpty ? 'empty' : 'filled',
+                    isSelected ? 'selected' : '',
+                    cell?.type === 'merged' ? 'merged' : ''
+                ].filter(Boolean).join(' ');
+                
+                const mergedStyles = cell?.type === 'merged' ? 
+                    this.getMergedCellStyles(cell, cellIndex, rows, cols) : '';
+                
                 html += `
-                    <div class="grid-cell-split ${isEmpty ? 'empty' : 'filled'} ${isSelected ? 'selected' : ''}" 
+                    <div class="${cellClasses}" 
                          data-cell-index="${cellIndex}" 
                          data-side="${side}"
-                         data-container-id="${container.id}">
+                         data-container-id="${container.id}"
+                         ${mergedStyles}>
                         ${this.renderCellContent(cell, cellIndex)}
                     </div>
                 `;
@@ -206,6 +223,38 @@ class SplitView {
 
     getPartEmoji(item) {
         return '🧩';
+    }
+
+    isCellPartOfMerge(cellIndex, cells) {
+        // Проверяем, является ли ячейка частью объединения (но не первой)
+        for (let i = 0; i < cells.length; i++) {
+            const cellData = cells[i];
+            if (cellData && cellData.type === 'merged') {
+                const { startIndex, cellCount } = cellData;
+                const endIndex = startIndex + cellCount - 1;
+                
+                // Если это не первая ячейка объединения, но входит в диапазон
+                if (cellIndex > startIndex && cellIndex <= endIndex) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    getMergedCellStyles(cellData, startIndex, rows, cols) {
+        const { direction, cellCount } = cellData;
+        
+        const startRow = Math.floor(startIndex / cols) + 1; // +1 для CSS Grid (начинается с 1)
+        const startCol = (startIndex % cols) + 1;
+        
+        if (direction === 'horizontal') {
+            // Горизонтальное объединение
+            return `style="grid-column: ${startCol} / ${startCol + cellCount}; grid-row: ${startRow} / ${startRow + 1};"`;
+        } else {
+            // Вертикальное объединение
+            return `style="grid-column: ${startCol} / ${startCol + 1}; grid-row: ${startRow} / ${startRow + cellCount};"`;
+        }
     }
 
     calculateContainerStats(container) {
