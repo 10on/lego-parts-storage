@@ -182,10 +182,10 @@ class LegoStorageApp {
                     <label class="form-label">Размер сетки</label>
                     <div class="form-row">
                         <div class="form-group">
-                            <input type="number" class="form-input" id="grid-rows" placeholder="Строки" value="6" min="1" max="20">
+                            <input type="number" class="form-input" id="grid-rows" placeholder="Строки" value="8" min="1" max="20">
                         </div>
                         <div class="form-group">
-                            <input type="number" class="form-input" id="grid-cols" placeholder="Столбцы" value="8" min="1" max="20">
+                            <input type="number" class="form-input" id="grid-cols" placeholder="Столбцы" value="4" min="1" max="20">
                         </div>
                     </div>
                 </div>
@@ -259,8 +259,8 @@ class LegoStorageApp {
     }
     
     updateColorPreview() {
-        const rows = parseInt(document.getElementById('grid-rows').value) || 6;
-        const cols = parseInt(document.getElementById('grid-cols').value) || 8;
+        const rows = parseInt(document.getElementById('grid-rows').value) || 8;
+        const cols = parseInt(document.getElementById('grid-cols').value) || 4;
         const color = document.getElementById('container-color').value;
         const previewGrid = document.getElementById('preview-grid');
         
