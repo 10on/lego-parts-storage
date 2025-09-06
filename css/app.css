@@ -676,10 +676,42 @@ body {
     color: #666;
 }
 
+/* Стили для заглушки куч */
+.container-pile-preview {
+    width: 180px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--border-radius);
+    margin: 0 auto;
+}
+
+.pile-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.pile-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.pile-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
 /* Удален .grid-size-info - больше не используется */
 
 /* Container Cards - дополнительные стили */
-.container-card:hover .container-grid-preview {
+.container-card:hover .container-grid-preview,
+.container-card:hover .container-pile-preview {
     transform: scale(1.05);
     transition: transform 0.2s ease;
 }

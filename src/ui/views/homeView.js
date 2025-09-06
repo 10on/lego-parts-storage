@@ -99,10 +99,23 @@ class HomeView {
     }
 
     renderContainerGrid(container, color) {
-        const { rows, cols, cells } = container;
+        const { rows, cols, cells, type } = container;
         const borderColor = this.darkenColor(color, 20);
         
-        // Отображаем полную сетку без ограничений
+        // Для куч показываем заглушку вместо сетки
+        if (type === 'pile') {
+            return `
+                <div class="container-pile-preview" 
+                     style="background-color: ${color};
+                            border: 2px solid ${borderColor};">
+                    <div class="pile-icon">📚</div>
+                    <div class="pile-text">Куча деталей</div>
+                    <div class="pile-count">${cells ? cells.filter(c => c !== null).length : 0} деталей</div>
+                </div>
+            `;
+        }
+        
+        // Отображаем полную сетку для cabinet и box
         let gridHtml = `
             <div class="container-grid-preview" 
                  style="grid-template-columns: repeat(${cols}, 1fr); 
