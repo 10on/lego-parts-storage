@@ -175,7 +175,6 @@ class ContainerView {
             return `
                 <div class="cell-content">
                 ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
-                ${partData.quantity ? `<div class="part-quantity-display">${partData.quantity}</div>` : ''}
                 </div>
             `;
         }
@@ -201,7 +200,6 @@ class ContainerView {
                             <div class="placeholder-icon-tiny">🧱</div>
                         </div>
                     </div>
-                    ${part.quantity ? `<div class="part-quantity-small">${part.quantity}</div>` : ''}
                 </div>
             `;
         }).join('');

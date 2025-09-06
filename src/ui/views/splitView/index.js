@@ -168,10 +168,10 @@ class SplitView {
             const item = items[0];
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name} (${item.quantity})"></div>`;
+                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name}"></div>`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${item.name} (${item.quantity})">${emoji}</div></div>`;
+                return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${item.name}">${emoji}</div></div>`;
             }
         }
         
@@ -183,7 +183,7 @@ class SplitView {
                 return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-part-emoji corner-${position}" title="${item.name} (${item.quantity})">${emoji}</div>`;
+                return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;
             }
         }).join('');
         
@@ -198,7 +198,7 @@ class SplitView {
                 return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-part-emoji corner-${position}" title="${item.name} (${item.quantity})">${emoji}</div>`;
+                return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;
             }
         }).join('');
         
