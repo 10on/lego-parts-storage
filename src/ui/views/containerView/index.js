@@ -209,31 +209,21 @@ class ContainerView {
                 <button type="button" class="close-btn" id="modal-close">✕</button>
             </div>
             <form class="cell-editor-form">
+                <div class="form-group">
+                    <label class="form-label">Деталь *</label>
+                    <input type="text" class="form-input autocomplete-input" id="cell-part" value="${this.formatPartValue(cellData)}" placeholder="Начните вводить номер или название детали..." required>
+                    <small class="form-help">Выберите деталь из каталога BrickLink</small>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Деталь *</label>
-                        <input type="text" class="form-input autocomplete-input" id="cell-part-id" value="${cellData?.partId || ''}" placeholder="Начните вводить номер или название детали..." required>
-                        <small class="form-help">Выберите деталь из каталога BrickLink</small>
+                        <label class="form-label">Цвет *</label>
+                        <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
+                        <small class="form-help">Выберите цвет из каталога BrickLink</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Количество</label>
                         <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1" max="999">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Название детали</label>
-                    <input type="text" class="form-input" id="cell-name" value="${cellData?.name || ''}" placeholder="Заполнится автоматически при выборе детали" readonly>
-                    <small class="form-help">Заполняется автоматически при выборе детали</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Цвет *</label>
-                    <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
-                    <small class="form-help">Выберите цвет из каталога BrickLink</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">URL изображения</label>
-                    <input type="url" class="form-input" id="cell-image" value="${cellData?.image || ''}" placeholder="https://img.bricklink.com/...">
-                    <small class="form-help">Необязательно. Автоматически подставится если оставить пустым</small>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">
@@ -244,6 +234,14 @@ class ContainerView {
                 </div>
             </form>
         `;
+    }
+
+    formatPartValue(cellData) {
+        if (!cellData || !cellData.partId) return '';
+        if (cellData.name) {
+            return `${cellData.partId} - ${cellData.name}`;
+        }
+        return cellData.partId;
     }
 
     setupCellEditorListeners(editor, cell, cellIndex) {
@@ -280,8 +278,7 @@ class ContainerView {
     }
 
     setupPartAutocomplete(editor) {
-        const partInput = editor.querySelector('#cell-part-id');
-        const nameInput = editor.querySelector('#cell-name');
+        const partInput = editor.querySelector('#cell-part');
 
         if (!partInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
             console.warn('BrickLink data not loaded, using simple input');
@@ -297,20 +294,12 @@ class ContainerView {
             source: async (query) => {
                 return window.brickLinkData.searchParts(query);
             },
-            onSelect: (value, item) => {
-                // Извлекаем Part ID из значения "partId - название"
-                const partData = window.brickLinkData.getPartById(value);
+            onSelect: async (value, item) => {
+                // value уже содержит partId, получаем полную информацию
+                const partData = await window.brickLinkData.getPartById(value);
                 if (partData) {
-                    partInput.value = partData.partId;
-                    nameInput.value = partData.name;
-                } else {
-                    // Если не найдено, пробуем извлечь из item
-                    const partId = item.dataset.value;
-                    const partInfo = window.brickLinkData.getPartById(partId);
-                    if (partInfo) {
-                        partInput.value = partInfo.partId;
-                        nameInput.value = partInfo.name;
-                    }
+                    // Устанавливаем объединенное значение "ID - Название"
+                    partInput.value = `${partData.partId} - ${partData.name}`;
                 }
             }
         });
@@ -345,26 +334,39 @@ class ContainerView {
     }
 
     async saveCellData(cell, cellIndex, editor) {
-        const partId = editor.querySelector('#cell-part-id').value.trim();
-        const name = editor.querySelector('#cell-name').value.trim();
+        const partValue = editor.querySelector('#cell-part').value.trim();
         const quantity = parseInt(editor.querySelector('#cell-quantity').value) || 1;
         const color = editor.querySelector('#cell-color').value.trim();
-        const image = editor.querySelector('#cell-image').value.trim();
 
         // Валидация
-        if (!partId) {
-            this.showValidationError(editor.querySelector('#cell-part-id'), 'Part ID обязателен');
+        if (!partValue) {
+            this.showValidationError(editor.querySelector('#cell-part'), 'Деталь обязательна');
             return;
         }
 
-        if (!name) {
-            this.showValidationError(editor.querySelector('#cell-name'), 'Название детали обязательно');
+        if (!color) {
+            this.showValidationError(editor.querySelector('#cell-color'), 'Цвет обязателен');
             return;
         }
 
         if (quantity < 1 || quantity > 999) {
             this.showValidationError(editor.querySelector('#cell-quantity'), 'Количество должно быть от 1 до 999');
             return;
+        }
+
+        // Извлекаем partId и name из объединенного значения
+        let partId, name;
+        if (partValue.includes(' - ')) {
+            [partId, name] = partValue.split(' - ', 2);
+        } else {
+            partId = partValue;
+            // Пытаемся найти название в каталоге
+            try {
+                const partData = await window.brickLinkData?.getPartById(partId);
+                name = partData?.name || partId;
+            } catch {
+                name = partId;
+            }
         }
 
         const cellData = {
@@ -374,7 +376,7 @@ class ContainerView {
             quantity,
             color: color || 'Unknown',
             colorId: this.getColorId(color),
-            image: image || this.generateImageUrl(partId, color),
+            image: this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
         };
 
