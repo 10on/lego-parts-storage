@@ -200,7 +200,7 @@ class ContainerView {
     }
 
     renderCellEditor(cellData, cellIndex) {
-        return `
+        const html = `
             <div class="cell-editor-header">
                 <div class="header-left">
                     <h4>${cellData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь'}</h4>
@@ -208,32 +208,46 @@ class ContainerView {
                 </div>
                 <button type="button" class="close-btn" id="modal-close">✕</button>
             </div>
-            <form class="cell-editor-form">
-                <div class="form-group">
-                    <label class="form-label">Деталь *</label>
-                    <input type="text" class="form-input autocomplete-input" id="cell-part" value="${this.formatPartValue(cellData)}" placeholder="Начните вводить номер или название детали..." required>
-                    <small class="form-help">Выберите деталь из каталога BrickLink</small>
-                </div>
-                <div class="form-row">
+            <div class="cell-editor-content">
+                <form class="cell-editor-form">
                     <div class="form-group">
-                        <label class="form-label">Цвет *</label>
-                        <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
-                        <small class="form-help">Выберите цвет из каталога BrickLink</small>
+                        <label class="form-label">Деталь *</label>
+                        <input type="text" class="form-input autocomplete-input" id="cell-part" value="${this.formatPartValue(cellData)}" placeholder="Начните вводить номер или название детали..." required>
+                        <small class="form-help">Выберите деталь из каталога BrickLink</small>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Количество</label>
-                        <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1" max="999">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Цвет *</label>
+                            <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
+                            <small class="form-help">Выберите цвет из каталога BrickLink</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Количество</label>
+                            <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1" max="999">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <span>${cellData ? 'Сохранить изменения' : 'Добавить деталь'}</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cell-cancel">Отмена</button>
+                        ${cellData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
+                    </div>
+                </form>
+                <div class="part-image-container">
+                    <div class="part-image-wrapper">
+                        <img id="part-image" src="" alt="Изображение детали" class="part-image" style="display: none;">
+                        <div id="part-image-placeholder" class="part-image-placeholder">
+                            <div class="placeholder-icon">🖼️</div>
+                            <div class="placeholder-text">Выберите деталь и цвет</div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <span>${cellData ? 'Сохранить изменения' : 'Добавить деталь'}</span>
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="cell-cancel">Отмена</button>
-                    ${cellData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
-                </div>
-            </form>
+            </div>
         `;
+        
+        console.log('Generated HTML contains part-image-container:', html.includes('part-image-container'));
+        return html;
     }
 
     formatPartValue(cellData) {
@@ -270,14 +284,17 @@ class ContainerView {
             });
         }
 
+        // Инициализация обновления изображения
+        const updateImage = this.setupImageUpdate(editor);
+        
         // Инициализация автокомплита для деталей
-        this.setupPartAutocomplete(editor);
+        this.setupPartAutocomplete(editor, updateImage);
         
         // Инициализация автокомплита для цветов
-        this.setupColorAutocomplete(editor);
+        this.setupColorAutocomplete(editor, updateImage);
     }
 
-    setupPartAutocomplete(editor) {
+    setupPartAutocomplete(editor, updateImage) {
         const partInput = editor.querySelector('#cell-part');
 
         if (!partInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
@@ -295,12 +312,22 @@ class ContainerView {
                 return window.brickLinkData.searchParts(query);
             },
             onSelect: async (value, item) => {
-                // value уже содержит partId, получаем полную информацию
-                const partData = await window.brickLinkData.getPartById(value);
-                if (partData) {
-                    // Устанавливаем объединенное значение "ID - Название"
-                    partInput.value = `${partData.partId} - ${partData.name}`;
+                try {
+                    // value уже содержит partId, получаем полную информацию
+                    const partData = await window.brickLinkData.getPartById(value);
+                    if (partData) {
+                        // Устанавливаем объединенное значение "ID - Название"
+                        partInput.value = `${partData.partId} - ${partData.name}`;
+                    } else {
+                        // Если не удалось получить данные, используем только ID
+                        partInput.value = value;
+                    }
+                } catch (error) {
+                    console.warn('Failed to get part data:', error);
+                    partInput.value = value;
                 }
+                // Обновляем изображение при выборе детали
+                if (updateImage) updateImage();
             }
         });
 
@@ -308,7 +335,7 @@ class ContainerView {
         this.partAutocomplete = partAutocomplete;
     }
 
-    setupColorAutocomplete(editor) {
+    setupColorAutocomplete(editor, updateImage) {
         const colorInput = editor.querySelector('#cell-color');
 
         if (!colorInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
@@ -326,6 +353,8 @@ class ContainerView {
             },
             onSelect: (value, item) => {
                 colorInput.value = value;
+                // Обновляем изображение при выборе цвета
+                updateImage();
             }
         });
 
@@ -505,15 +534,61 @@ class ContainerView {
     }
 
     getColorId(color) {
+        if (!color || color.trim() === '') {
+            return '0'; // Дефолтный рендер BrickLink
+        }
+        
         const colorMap = {
             'Red': '4',
             'Blue': '1',
             'Yellow': '3',
             'Green': '2',
             'White': '1',
-            'Black': '0'
+            'Black': '0',
+            'Light Gray': '7',
+            'Dark Gray': '8',
+            'Light Blue': '9',
+            'Dark Blue': '10',
+            'Orange': '11',
+            'Purple': '12',
+            'Pink': '13',
+            'Brown': '14',
+            'Tan': '15',
+            'Lime': '16',
+            'Magenta': '17',
+            'Nougat': '18',
+            'Light Nougat': '19',
+            'Dark Nougat': '20',
+            'Silver': '21',
+            'Gold': '22',
+            'Copper': '23',
+            'Pearl': '24',
+            'Transparent': '25',
+            'Transparent Red': '26',
+            'Transparent Blue': '27',
+            'Transparent Yellow': '28',
+            'Transparent Green': '29',
+            'Transparent Orange': '30',
+            'Transparent Purple': '31',
+            'Transparent Pink': '32',
+            'Transparent Brown': '33',
+            'Transparent Light Blue': '34',
+            'Transparent Dark Blue': '35',
+            'Transparent Light Gray': '36',
+            'Transparent Dark Gray': '37',
+            'Transparent Black': '38',
+            'Transparent White': '39',
+            'Transparent Lime': '40',
+            'Transparent Magenta': '41',
+            'Transparent Nougat': '42',
+            'Transparent Light Nougat': '43',
+            'Transparent Dark Nougat': '44',
+            'Transparent Silver': '45',
+            'Transparent Gold': '46',
+            'Transparent Copper': '47',
+            'Transparent Pearl': '48'
         };
-        return colorMap[color] || '1';
+        return colorMap[color] || '0'; // Дефолтный рендер если цвет не найден
     }
 
     updateGridSize() {
@@ -521,5 +596,90 @@ class ContainerView {
         if (this.container) {
             this.renderGrid();
         }
+    }
+
+    setupImageUpdate(editor) {
+        const partInput = editor.querySelector('#cell-part');
+        const colorInput = editor.querySelector('#cell-color');
+        const imageElement = editor.querySelector('#part-image');
+        const placeholderElement = editor.querySelector('#part-image-placeholder');
+
+        const updateImage = async () => {
+            const partValue = partInput.value.trim();
+            const colorValue = colorInput.value.trim();
+
+            // Показываем заглушку если деталь не выбрана
+            if (!partValue) {
+                this.showImagePlaceholder(imageElement, placeholderElement);
+                return;
+            }
+
+            // Извлекаем partId из значения (может быть в формате "3001 - Brick 2x4")
+            const partId = partValue.split(' - ')[0].trim();
+            
+            // Если цвет не указан, используем дефолтный рендер BrickLink (ID = 0)
+            const colorId = colorValue ? this.getColorId(colorValue) : '0';
+
+            try {
+                const imageUrl = this.getPartImageUrl(partId, colorId);
+                await this.loadPartImage(imageElement, placeholderElement, imageUrl);
+            } catch (error) {
+                console.warn('Failed to load part image:', error);
+                this.showImagePlaceholder(imageElement, placeholderElement);
+            }
+        };
+
+        // НЕ обновляем изображение при вводе - только при выборе из списка
+
+        // Показываем заглушку при загрузке формы
+        this.showImagePlaceholder(imageElement, placeholderElement);
+        
+        // Возвращаем функцию updateImage для использования в других методах
+        return updateImage;
+    }
+
+    getPartImageUrl(partId, colorId) {
+        try {
+            // Используем ImageManager если доступен, иначе формируем URL напрямую
+            if (window.imageManager) {
+                return window.imageManager.getBrickLinkImageUrl(partId, colorId);
+            }
+            
+            // Fallback URL для BrickLink
+            return `https://img.bricklink.com/ItemImage/PN/${colorId}/${partId}.png`;
+        } catch (error) {
+            console.warn('Failed to get image URL:', error);
+            // Fallback URL для BrickLink
+            return `https://img.bricklink.com/ItemImage/PN/${colorId}/${partId}.png`;
+        }
+    }
+
+    async loadPartImage(imageElement, placeholderElement, imageUrl) {
+        console.log('Loading image:', imageUrl);
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                console.log('Image loaded successfully');
+                imageElement.src = imageUrl;
+                imageElement.style.display = 'block';
+                placeholderElement.style.display = 'none';
+                resolve();
+            };
+            
+            img.onerror = (error) => {
+                console.warn('Image failed to load:', error, 'URL:', imageUrl);
+                this.showImagePlaceholder(imageElement, placeholderElement);
+                reject(new Error('Failed to load image'));
+            };
+            
+            img.src = imageUrl;
+        });
+    }
+
+    showImagePlaceholder(imageElement, placeholderElement) {
+        imageElement.style.display = 'none';
+        imageElement.src = '';
+        placeholderElement.style.display = 'flex';
     }
 }

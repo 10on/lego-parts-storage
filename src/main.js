@@ -13,44 +13,83 @@ class LegoStorageApp {
     async init() {
         console.log('🚀 Инициализация LEGO Storage Mapper');
         
-        // Инициализация storage
-        this.storage = new LocalStorageAdapter();
+        // Проверяем, что LoadingProgress загружен
+        if (typeof LoadingProgress === 'undefined') {
+            console.error('❌ LoadingProgress не загружен');
+            return;
+        }
         
-        // Инициализация компонентов
-        this.sidebar = new Sidebar();
-        this.homeView = new HomeView();
-        this.containerView = new ContainerView();
-        this.pileView = new PileView();
-        this.splitView = new SplitView();
-        this.duplicatesView = new DuplicatesView();
-        this.importView = new ImportView();
-        this.settingsView = new SettingsView();
+        // Показываем прогресс инициализации
+        const initProgress = LoadingProgress.createAppInitProgress();
         
-        // Загрузка данных BrickLink
-        await this.loadBrickLinkData();
+        if (!initProgress) {
+            console.error('❌ Не удалось создать прогресс-бар');
+            return;
+        }
         
-        // Загрузка тестовых данных
-        await this.loadMockData();
-        
-        // Инициализация событий
-        this.setupEventListeners();
-        
-        // Инициализация роутера после готовности приложения
-        this.router = new Router();
-        this.router.init();
-        
-        // Показ начального экрана
-        this.showView('home');
-        
-        console.log('✅ Приложение инициализировано');
+        try {
+            // Этап 1: Проверка локального хранилища
+            initProgress.updateStep(0, 50, 'Поиск сохраненных данных...');
+            this.storage = new LocalStorageAdapter();
+            initProgress.completeStep(0, 'Хранилище готово');
+            
+            // Этап 2: Инициализация IndexedDB
+            initProgress.updateStep(1, 50, 'Подключение к базе данных...');
+            this.imageManager = new ImageManager();
+            window.imageManager = this.imageManager;
+            initProgress.completeStep(1, 'База данных подключена');
+            
+            // Этап 3: Загрузка каталога деталей
+            initProgress.updateStep(2, 0, 'Загрузка данных BrickLink...');
+            await this.loadBrickLinkData();
+            initProgress.updateStep(2, 50, 'Загрузка данных проекта...');
+            await this.loadMockData();
+            initProgress.completeStep(2, 'Данные загружены');
+            
+            // Этап 4: Инициализация компонентов
+            initProgress.updateStep(3, 25, 'Создание интерфейса...');
+            this.sidebar = new Sidebar();
+            this.homeView = new HomeView();
+            this.containerView = new ContainerView();
+            this.pileView = new PileView();
+            this.splitView = new SplitView();
+            this.duplicatesView = new DuplicatesView();
+            this.importView = new ImportView();
+            this.settingsView = new SettingsView();
+            
+            initProgress.updateStep(3, 75, 'Настройка навигации...');
+            this.setupEventListeners();
+            this.router = new Router();
+            this.router.init();
+            
+            initProgress.updateStep(3, 100, 'Показ интерфейса...');
+            this.showView('home');
+            
+            initProgress.completeStep(3, 'Приложение готово!');
+            
+            console.log('✅ Приложение инициализировано');
+            
+            // Скрываем прогресс через 1 секунду
+            setTimeout(() => {
+                initProgress.hide();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+            initProgress.showError(initProgress.currentStep, error.message);
+            setTimeout(() => {
+                initProgress.hide();
+            }, 3000);
+        }
     }
 
     async loadBrickLinkData() {
         try {
             console.log('📦 Загрузка данных BrickLink...');
-            await window.brickLinkData.loadData();
+            await window.brickLinkData.loadData(true); // Показываем прогресс
         } catch (error) {
             console.error('❌ Ошибка загрузки данных BrickLink:', error);
+            this.showNotification('Ошибка загрузки данных каталога. Некоторые функции могут быть недоступны.', 'warning');
             // Приложение может работать и без BrickLink данных
         }
     }
