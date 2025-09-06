@@ -189,6 +189,23 @@ class IndexedDBAdapter extends StorageAdapter {
         }
     }
 
+    async clearAll() {
+        if (!this.db) {
+            await this.init();
+        }
+        
+        try {
+            // Очищаем все хранилища объектов
+            await this.clear('containers');
+            await this.clear('pileItems');
+            await this.clear('settings');
+            return true;
+        } catch (error) {
+            console.error('Ошибка очистки данных IndexedDB:', error);
+            return false;
+        }
+    }
+
     getDefaultProject() {
         return {
             containers: [],

@@ -199,6 +199,40 @@ class FirebaseAdapter extends StorageAdapter {
         }
     }
 
+    async clearAll() {
+        if (!this.initialized) {
+            await this.init();
+        }
+        
+        try {
+            const batch = this.db.batch();
+            
+            // Получаем все документы из коллекций
+            const containersSnapshot = await this.db.collection('containers').get();
+            const pileItemsSnapshot = await this.db.collection('pileItems').get();
+            const settingsSnapshot = await this.db.collection('settings').get();
+            
+            // Удаляем все документы
+            containersSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            pileItemsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            settingsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            await batch.commit();
+            return true;
+        } catch (error) {
+            console.error('Ошибка очистки данных Firebase:', error);
+            return false;
+        }
+    }
+
     getDefaultProject() {
         return {
             containers: [],

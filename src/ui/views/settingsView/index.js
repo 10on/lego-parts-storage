@@ -350,9 +350,59 @@ class SettingsView {
         }
     }
 
-    clearAllData() {
-        if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит все данные к начальному состоянию:\n\n• Все контейнеры и их содержимое будут удалены\n• Все детали в куче будут удалены\n• Настройки сбросятся к умолчанию\n• Будут созданы дефолтные контейнеры\n\nВы уверены, что хотите продолжить?')) {
+    async clearAllData() {
+        if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит все данные к начальному состоянию:\n\n• Все контейнеры и их содержимое будут удалены\n• Все детали в куче будут удалены\n• Настройки сбросятся к умолчанию\n• Будут созданы дефолтные контейнеры\n• Очистятся ВСЕ хранилища (localStorage, IndexedDB, Firebase)\n\nВы уверены, что хотите продолжить?')) {
             try {
+                // Очищаем все адаптеры хранения
+                const adapters = ['local', 'idb', 'firebase'];
+                const clearPromises = [];
+                
+                for (const adapterType of adapters) {
+                    try {
+                        const adapter = StorageAdapterFactory.create(adapterType);
+                        clearPromises.push(adapter.clearAll());
+                        console.log(`🧹 Очистка ${adapterType} адаптера...`);
+                    } catch (error) {
+                        console.warn(`⚠️ Не удалось создать ${adapterType} адаптер:`, error);
+                    }
+                }
+                
+                // Ждем завершения очистки всех адаптеров
+                await Promise.allSettled(clearPromises);
+                
+                // Дополнительно очищаем localStorage полностью
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('lego-storage')) {
+                        keysToRemove.push(key);
+                    }
+                }
+
+                // Удаляем все ключи localStorage, связанные с приложением
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+
+                // Очищаем IndexedDB полностью (если доступен)
+                try {
+                    if ('indexedDB' in window) {
+                        // Удаляем всю базу данных LegoStorageDB
+                        const deleteRequest = indexedDB.deleteDatabase('LegoStorageDB');
+                        await new Promise((resolve, reject) => {
+                            deleteRequest.onsuccess = () => resolve();
+                            deleteRequest.onerror = () => reject(deleteRequest.error);
+                            deleteRequest.onblocked = () => {
+                                console.warn('IndexedDB заблокирован, пропускаем полную очистку');
+                                resolve();
+                            };
+                        });
+                        console.log('🗑️ IndexedDB база данных удалена');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Не удалось удалить IndexedDB базу данных:', error);
+                }
+
                 // Получаем дефолтные данные
                 const mockData = new MockData();
                 
@@ -361,7 +411,7 @@ class SettingsView {
                     containers: mockData.getContainers(),
                     pileItems: mockData.getPileItems(),
                     settings: {
-                        storageAdapter: 'local',
+                        storageAdapter: 'local', // По умолчанию используем localStorage
                         imageSource: 'bricklink',
                         theme: 'light'
                     },
@@ -371,25 +421,8 @@ class SettingsView {
                     resetAt: new Date().toISOString() // Маркер что данные были сброшены пользователем
                 };
 
-                // Сохраняем проект с дефолтными данными
+                // Сохраняем проект с дефолтными данными в localStorage (основное хранилище)
                 localStorage.setItem('lego-storage-project', JSON.stringify(resetProject));
-
-                // Очищаем другие ключи localStorage, связанные с приложением  
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key !== 'lego-storage-project' && (
-                        key.startsWith('lego-storage') || 
-                        key.includes('lego')
-                    )) {
-                        keysToRemove.push(key);
-                    }
-                }
-
-                // Удаляем дополнительные ключи (но оставляем основной проект)
-                keysToRemove.forEach(key => {
-                    localStorage.removeItem(key);
-                });
 
                 // Сбрасываем настройки к дефолтным
                 this.settings = {
@@ -406,7 +439,7 @@ class SettingsView {
                 
                 // Показываем уведомление об успехе
                 if (window.app) {
-                    window.app.showNotification('Данные сброшены к начальному состоянию', 'success');
+                    window.app.showNotification('Все данные очищены и сброшены к начальному состоянию', 'success');
                 }
 
                 // Перезагружаем страницу через короткий таймаут для отображения уведомления

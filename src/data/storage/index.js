@@ -23,6 +23,10 @@ class StorageAdapter {
     async importAll(data) {
         throw new Error('importAll method must be implemented');
     }
+
+    async clearAll() {
+        throw new Error('clearAll method must be implemented');
+    }
 }
 
 // Фабрика адаптеров
