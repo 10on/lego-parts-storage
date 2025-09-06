@@ -94,6 +94,106 @@ class Container {
         this.updatedAt = new Date().toISOString();
     }
 
+    // Новые методы для работы с множественными деталями в ячейке
+    addPartToCell(row, col, part) {
+        const index = this.getCellIndex(row, col);
+        if (!this.cells[index]) {
+            this.cells[index] = { items: [] };
+        }
+        
+        // Если ячейка содержит одну деталь (старый формат), конвертируем в новый
+        if (this.cells[index].partId && !this.cells[index].items) {
+            const existingPart = { ...this.cells[index] };
+            this.cells[index] = { items: [existingPart] };
+        }
+        
+        // Добавляем новую деталь
+        if (!this.cells[index].items) {
+            this.cells[index].items = [];
+        }
+        
+        // Проверяем, есть ли уже такая деталь (по partId и color)
+        const existingItemIndex = this.cells[index].items.findIndex(item => 
+            item.partId === part.partId && item.color === part.color
+        );
+        
+        if (existingItemIndex >= 0) {
+            // Увеличиваем количество существующей детали
+            this.cells[index].items[existingItemIndex].quantity += part.quantity || 1;
+        } else {
+            // Добавляем новую деталь
+            this.cells[index].items.push({
+                ...part,
+                quantity: part.quantity || 1
+            });
+        }
+        
+        this.updatedAt = new Date().toISOString();
+    }
+
+    removePartFromCell(row, col, partId, color, quantity = 1) {
+        const index = this.getCellIndex(row, col);
+        if (!this.cells[index] || !this.cells[index].items) {
+            return false;
+        }
+        
+        const itemIndex = this.cells[index].items.findIndex(item => 
+            item.partId === partId && item.color === color
+        );
+        
+        if (itemIndex >= 0) {
+            const item = this.cells[index].items[itemIndex];
+            item.quantity = Math.max(0, item.quantity - quantity);
+            
+            if (item.quantity <= 0) {
+                this.cells[index].items.splice(itemIndex, 1);
+            }
+            
+            // Если деталей не осталось, очищаем ячейку
+            if (this.cells[index].items.length === 0) {
+                this.cells[index] = null;
+            }
+            
+            this.updatedAt = new Date().toISOString();
+            return true;
+        }
+        
+        return false;
+    }
+
+    getCellParts(row, col) {
+        const index = this.getCellIndex(row, col);
+        const cellData = this.cells[index];
+        
+        if (!cellData) return [];
+        
+        // Если это объединенная ячейка
+        if (cellData.type === 'merged' && cellData.items) {
+            return cellData.items;
+        }
+        
+        // Если это обычная ячейка с множественными деталями
+        if (cellData.items) {
+            return cellData.items;
+        }
+        
+        // Если это старая ячейка с одной деталью
+        if (cellData.partId) {
+            return [cellData];
+        }
+        
+        return [];
+    }
+
+    getCellPartCount(row, col) {
+        return this.getCellParts(row, col).length;
+    }
+
+    getCellTotalQuantity(row, col) {
+        const parts = this.getCellParts(row, col);
+        return parts.reduce((total, part) => total + (part.quantity || 1), 0);
+    }
+
     clearCell(row, col) {
         this.setCell(row, col, null);
     }

@@ -147,32 +147,75 @@ class ContainerView {
             }
             
             // Заполненная объединенная ячейка - показываем содержимое как в обычной
-            const firstItem = cellData.items[0];
-            const totalQuantity = cellData.items.reduce((sum, item) => sum + item.quantity, 0);
-            
-            return `
-                <div class="cell-content">
-                    ${firstItem.image ? `<img src="${firstItem.image}" alt="${firstItem.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
-                    <div class="cell-part-id">${firstItem.partId}</div>
-                    <div class="cell-quantity">${totalQuantity}</div>
-                    <div class="cell-color">${firstItem.color}</div>
-                </div>
-            `;
+            return this.renderMultipleParts(cellData.items, true);
         }
         
         if (cellData) {
-            return `
-                <div class="cell-content">
-                    ${cellData.image ? `<img src="${cellData.image}" alt="${cellData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
-                    <div class="cell-part-id">${cellData.partId}</div>
-                    <div class="cell-quantity">${cellData.quantity}</div>
-                    <div class="cell-color">${cellData.color}</div>
-                </div>
-            `;
+            // Проверяем, есть ли массив деталей (новый формат)
+            if (cellData.items && cellData.items.length > 0) {
+                return this.renderMultipleParts(cellData.items, false);
+            }
+            
+            // Старый формат - одна деталь
+            if (cellData.partId) {
+                return this.renderSinglePart(cellData);
+            }
         }
         
         // Пустая ячейка
         return '<div class="cell-content"></div>';
+    }
+
+    renderSinglePart(partData) {
+            return `
+                <div class="cell-content">
+                ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
+                <div class="cell-part-id">${partData.partId}</div>
+                <div class="cell-quantity">${partData.quantity || 1}</div>
+                <div class="cell-color">${partData.color}</div>
+                </div>
+            `;
+        }
+        
+    renderMultipleParts(parts, isMerged = false) {
+        if (!parts || parts.length === 0) {
+            return '<div class="cell-content"></div>';
+        }
+
+        // Сортируем детали по количеству (больше сначала)
+        const sortedParts = [...parts].sort((a, b) => (b.quantity || 1) - (a.quantity || 1));
+        
+        // Показываем максимум 3 детали, остальные скрываем
+        const visibleParts = sortedParts.slice(0, 3);
+        const hiddenCount = Math.max(0, sortedParts.length - 3);
+        
+        const partsHtml = visibleParts.map((part, index) => {
+            const isMain = index === 0;
+            
+            return `
+                <div class="cell-part ${isMain ? 'main-part' : 'secondary-part'}">
+                    <div class="part-image-container-small">
+                        ${part.image ? `<img src="${part.image}" alt="${part.name}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                        <div class="part-image-placeholder-small" style="${part.image ? 'display: flex;' : ''}">
+                            <div class="placeholder-icon-tiny">🧱</div>
+                        </div>
+                    </div>
+                    <div class="part-info">
+                        <div class="part-id">${part.partId}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const hiddenHtml = hiddenCount > 0 ? 
+            `<div class="hidden-parts">+${hiddenCount} more</div>` : '';
+
+        return `
+            <div class="cell-content multiple-parts ${isMerged ? 'merged' : ''}">
+                ${partsHtml}
+                ${hiddenHtml}
+            </div>
+        `;
     }
 
     setupEventListeners() {
@@ -337,38 +380,75 @@ class ContainerView {
         
         // Получаем данные для отображения
         let displayData = null;
+        let existingParts = [];
+        
         if (isMerged && hasItems) {
             // Для объединенной ячейки показываем данные первой детали
             displayData = cellData.items[0];
+            existingParts = cellData.items;
+        } else if (cellData && cellData.items && cellData.items.length > 0) {
+            // Для обычной ячейки с множественными деталями
+            displayData = cellData.items[0];
+            existingParts = cellData.items;
         } else if (cellData && cellData.partId) {
-            // Для обычной ячейки показываем данные ячейки
+            // Для обычной ячейки с одной деталью
             displayData = cellData;
+            existingParts = [cellData];
         }
         
         const html = `
             <div class="cell-editor-header">
                 <div class="header-left">
-                    <h4>${isMerged ? '🔗 Объединенная ячейка' : (displayData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь')}</h4>
-                    <span class="cell-position">Ячейка ${cellIndex + 1}${isMerged ? ` (${cellData.cellCount} ячеек)` : ''}</span>
+                    <h4>${isMerged ? '🔗 Объединенная ячейка' : (existingParts.length > 0 ? '✏️ Управление деталями' : '➕ Добавить деталь')}</h4>
+                    <span class="cell-position">Ячейка ${cellIndex + 1}${isMerged ? ` (${cellData.cellCount} ячеек)` : ''}${existingParts.length > 0 ? ` • ${existingParts.length} деталей` : ''}</span>
                 </div>
                 <button type="button" class="close-btn" id="modal-close">✕</button>
             </div>
             <div class="cell-editor-content">
-                ${isMerged && hasItems ? `
-                    <div class="merged-cell-info">
-                        <h5>Содержимое объединенной ячейки:</h5>
-                        <div class="merged-items-list">
-                            ${cellData.items.map((item, index) => `
-                                <div class="merged-item">
-                                    <span class="item-part">${item.partId}</span>
-                                    <span class="item-name">${item.name}</span>
-                                    <span class="item-color">${item.color}</span>
-                                    <span class="item-quantity">×${item.quantity}</span>
+                ${existingParts.length > 0 ? `
+                    <div class="editor-tabs">
+                        <button type="button" class="tab-btn active" data-tab="existing">📦 Текущие детали (${existingParts.length})</button>
+                        <button type="button" class="tab-btn" data-tab="add-new">➕ Добавить новую</button>
+                    </div>
+                ` : ''}
+                
+                <div class="tab-content">
+                    ${existingParts.length > 0 ? `
+                        <div class="tab-panel active" id="tab-existing">
+                            <div class="existing-parts-section">
+                                <div class="existing-parts-list">
+                                    ${existingParts.map((item, index) => `
+                                        <div class="existing-part-item" data-part-id="${item.partId}" data-color="${item.color}">
+                                            <div class="part-image-small">
+                                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                                                <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
+                                                    <div class="placeholder-icon-small">🧱</div>
+                                                </div>
+                                            </div>
+                                            <div class="part-info">
+                                                <div class="part-id">${item.partId}</div>
+                                                <div class="part-name">${item.name || 'Unknown'}</div>
+                                                <div class="part-color">${item.color}</div>
+                                            </div>
+                                            <div class="part-quantity">
+                                                <input type="number" value="${item.quantity || 1}" min="1" max="999" class="quantity-input" data-index="${index}">
+                                            </div>
+                                            <div class="part-actions">
+                                                <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
+                                                <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
+                                            </div>
                                 </div>
                             `).join('')}
+                                </div>
+                                <div class="existing-parts-actions">
+                                    <button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить все детали</button>
+                                </div>
                         </div>
                     </div>
                 ` : ''}
+                    
+                    <div class="tab-panel ${existingParts.length === 0 ? 'active' : ''}" id="tab-add-new">
+                        <div class="form-and-image-container">
                 <form class="cell-editor-form">
                     <div class="form-group">
                         <label class="form-label">Деталь *</label>
@@ -388,10 +468,9 @@ class ContainerView {
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
-                            <span>${isMerged ? 'Добавить деталь' : (displayData ? 'Сохранить изменения' : 'Добавить деталь')}</span>
+                                        <span>➕ Добавить деталь</span>
                         </button>
                         <button type="button" class="btn btn-secondary" id="cell-cancel">Отмена</button>
-                        ${displayData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
                     </div>
                 </form>
                 <div class="part-image-container">
@@ -400,6 +479,9 @@ class ContainerView {
                         <div id="part-image-placeholder" class="part-image-placeholder">
                             <div class="placeholder-icon">🖼️</div>
                             <div class="placeholder-text">Выберите деталь и цвет</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -478,6 +560,12 @@ class ContainerView {
         
         // Инициализация автокомплита для цветов
         this.setupColorAutocomplete(editor, updateImage);
+        
+        // Инициализация обработчиков для существующих деталей
+        this.setupExistingPartsListeners(editor, cell, cellIndex);
+        
+        // Инициализация обработчиков табов
+        this.setupTabListeners(editor);
     }
 
     setupPartAutocomplete(editor, updateImage) {
@@ -548,10 +636,102 @@ class ContainerView {
         this.colorAutocomplete = colorAutocomplete;
     }
 
+    setupExistingPartsListeners(editor, cell, cellIndex) {
+        // Обработчики для изменения количества
+        editor.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const newQuantity = parseInt(e.target.value) || 1;
+                this.updatePartQuantity(cell, cellIndex, index, newQuantity);
+            });
+        });
+
+        // Обработчики для удаления деталей
+        editor.querySelectorAll('.btn-remove-part').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.removePartFromCell(cell, cellIndex, index);
+            });
+        });
+
+        // Обработчики для редактирования деталей
+        editor.querySelectorAll('.btn-edit-part').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.editPartInCell(editor, cell, cellIndex, index);
+            });
+        });
+    }
+
+    updatePartQuantity(cell, cellIndex, partIndex, newQuantity) {
+        const cellData = this.container.cells[cellIndex];
+        if (!cellData) return;
+
+        // Если это объединенная ячейка
+        if (cellData.type === 'merged' && cellData.items) {
+            if (cellData.items[partIndex]) {
+                cellData.items[partIndex].quantity = Math.max(1, newQuantity);
+                cellData.updatedAt = new Date().toISOString();
+            }
+        } else if (cellData.items) {
+            // Если это обычная ячейка с множественными деталями
+            if (cellData.items[partIndex]) {
+                cellData.items[partIndex].quantity = Math.max(1, newQuantity);
+                this.container.updatedAt = new Date().toISOString();
+            }
+        }
+
+        // Обновляем отображение ячейки
+        cell.innerHTML = this.renderCellContent(cellData);
+    }
+
+    removePartFromCell(cell, cellIndex, partIndex) {
+        const cellData = this.container.cells[cellIndex];
+        if (!cellData) return;
+
+        // Если это объединенная ячейка
+        if (cellData.type === 'merged' && cellData.items) {
+            cellData.items.splice(partIndex, 1);
+            if (cellData.items.length === 0) {
+                // Если деталей не осталось, очищаем ячейку
+                this.container.cells[cellIndex] = null;
+            } else {
+                cellData.updatedAt = new Date().toISOString();
+            }
+        } else if (cellData.items) {
+            // Если это обычная ячейка с множественными деталями
+            cellData.items.splice(partIndex, 1);
+            if (cellData.items.length === 0) {
+                // Если деталей не осталось, очищаем ячейку
+                this.container.cells[cellIndex] = null;
+            } else {
+                this.container.updatedAt = new Date().toISOString();
+            }
+        }
+
+        // Обновляем отображение ячейки
+        const updatedCellData = this.container.cells[cellIndex];
+        cell.innerHTML = this.renderCellContent(updatedCellData);
+
+        // Если ячейка стала пустой, закрываем редактор
+        if (!updatedCellData) {
+            this.closeCellEditor();
+        } else {
+            // Обновляем счетчики для оставшихся деталей
+            const remainingParts = this.getCellPartsFromData(updatedCellData);
+            this.updateTabCounter(editor, remainingParts.length);
+            this.updateModalHeader(editor, remainingParts.length);
+            
+            // Перерендериваем редактор с обновленными данными
+            this.openCellEditor(cell);
+        }
+    }
+
     async saveCellData(cell, cellIndex, editor) {
         const partValue = editor.querySelector('#cell-part').value.trim();
         const quantity = parseInt(editor.querySelector('#cell-quantity').value) || 1;
         const color = editor.querySelector('#cell-color').value.trim();
+        const editingPartIndex = editor.dataset.editingPartIndex;
 
         // Валидация
         if (!partValue) {
@@ -594,8 +774,59 @@ class ContainerView {
             lastUpdated: new Date().toISOString()
         };
 
-        // Проверяем, является ли ячейка объединенной
+        // Если это редактирование существующей детали
+        if (editingPartIndex !== undefined) {
+            this.updateExistingPart(cell, cellIndex, parseInt(editingPartIndex), newItem);
+            // Сбрасываем флаг редактирования
+            delete editor.dataset.editingPartIndex;
+            // Возвращаем текст кнопки
+            const submitBtn = editor.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<span>➕ Добавить деталь</span>';
+            }
+        } else {
+            // Это добавление новой детали
+            this.addNewPart(cell, cellIndex, newItem);
+        }
+
+        // Обновляем отображение ячейки
+        const updatedCellData = this.container.cells[cellIndex];
+        cell.innerHTML = this.renderCellContent(updatedCellData);
+        cell.classList.remove('empty', 'editing');
+        cell.classList.add('filled');
+
+        // Очищаем поля формы для добавления следующей детали
+        editor.querySelector('#cell-part').value = '';
+        editor.querySelector('#cell-color').value = '';
+        editor.querySelector('#cell-quantity').value = '1';
+        
+        // Обновляем изображение (показываем заглушку)
+        const imageElement = editor.querySelector('#part-image');
+        const placeholderElement = editor.querySelector('#part-image-placeholder');
+        if (imageElement && placeholderElement) {
+            imageElement.style.display = 'none';
+            placeholderElement.style.display = 'flex';
+        }
+        
+        // Автоматическое сохранение
+        if (window.app) {
+            await window.app.autoSave();
+            const action = editingPartIndex !== undefined ? 'обновлена' : 'добавлена';
+            window.app.showNotification(`Деталь "${name}" ${action}!`, 'success');
+        }
+        
+        // Обновляем секцию существующих деталей
+        this.updateExistingPartsSection(editor, cellIndex);
+        
+        // Переключаемся на вкладку "Текущие детали" чтобы показать обновленный список
+        this.switchToExistingPartsTab(editor);
+        
+        // НЕ закрываем редактор - позволяем добавить еще детали
+    }
+
+    addNewPart(cell, cellIndex, newItem) {
         const existingCellData = this.container.cells[cellIndex];
+        
         if (existingCellData && existingCellData.type === 'merged') {
             // Если это объединенная ячейка, добавляем деталь в массив items
             if (!existingCellData.items) {
@@ -604,28 +835,242 @@ class ContainerView {
             existingCellData.items.push(newItem);
             existingCellData.updatedAt = new Date().toISOString();
         } else {
-            // Если это обычная ячейка, заменяем данные
-            const cellData = {
-                id: `cell-${cellIndex}`,
-                ...newItem
-            };
-            this.container.cells[cellIndex] = cellData;
+            // Если это обычная ячейка, добавляем деталь к существующим
+            if (!existingCellData) {
+                // Пустая ячейка - создаем новую структуру
+                this.container.cells[cellIndex] = { items: [newItem] };
+            } else if (existingCellData.items) {
+                // Ячейка уже содержит массив деталей - добавляем к ним
+                // Проверяем, есть ли уже такая деталь (по partId и color)
+                const existingItemIndex = existingCellData.items.findIndex(item => 
+                    item.partId === newItem.partId && item.color === newItem.color
+                );
+                
+                if (existingItemIndex >= 0) {
+                    // Увеличиваем количество существующей детали
+                    existingCellData.items[existingItemIndex].quantity += newItem.quantity || 1;
+                } else {
+                    // Добавляем новую деталь
+                    existingCellData.items.push(newItem);
+                }
+            } else if (existingCellData.partId) {
+                // Старая ячейка с одной деталью - конвертируем в новый формат
+                const existingPart = { ...existingCellData };
+                this.container.cells[cellIndex] = { items: [existingPart, newItem] };
+            } else {
+                // Неожиданная структура - создаем новую
+                this.container.cells[cellIndex] = { items: [newItem] };
+            }
         }
 
         this.container.updatedAt = new Date().toISOString();
+    }
 
-        // Обновляем отображение ячейки
-        const updatedCellData = this.container.cells[cellIndex];
-        cell.innerHTML = this.renderCellContent(updatedCellData);
-        cell.classList.remove('empty', 'editing');
-        cell.classList.add('filled');
+    updateExistingPart(cell, cellIndex, partIndex, updatedItem) {
+        const cellData = this.container.cells[cellIndex];
+        if (!cellData) return;
 
-        this.closeCellEditor();
+        // Если это объединенная ячейка
+        if (cellData.type === 'merged' && cellData.items) {
+            if (cellData.items[partIndex]) {
+                cellData.items[partIndex] = updatedItem;
+                cellData.updatedAt = new Date().toISOString();
+            }
+        } else if (cellData.items) {
+            // Если это обычная ячейка с множественными деталями
+            if (cellData.items[partIndex]) {
+                cellData.items[partIndex] = updatedItem;
+                this.container.updatedAt = new Date().toISOString();
+            }
+        }
+    }
+
+    switchToExistingPartsTab(editor) {
+        const existingTab = editor.querySelector('[data-tab="existing"]');
+        const existingPanel = editor.querySelector('#tab-existing');
         
-        // Автоматическое сохранение
-        if (window.app) {
-            await window.app.autoSave();
-            window.app.showNotification(`Деталь "${name}" добавлена!`, 'success');
+        if (existingTab && existingPanel) {
+            // Убираем активный класс со всех табов
+            editor.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            editor.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            
+            // Активируем вкладку "Текущие детали"
+            existingTab.classList.add('active');
+            existingPanel.classList.add('active');
+        }
+    }
+
+    updateExistingPartsSection(editor, cellIndex) {
+        const cellData = this.container.cells[cellIndex];
+        if (!cellData) return;
+
+        // Получаем список деталей
+        let existingParts = [];
+        if (cellData.type === 'merged' && cellData.items) {
+            existingParts = cellData.items;
+        } else if (cellData.items) {
+            existingParts = cellData.items;
+        } else if (cellData.partId) {
+            existingParts = [cellData];
+        }
+
+        // Обновляем секцию существующих деталей
+        const existingPartsSection = editor.querySelector('.existing-parts-section');
+        if (existingPartsSection) {
+            const partsList = existingPartsSection.querySelector('.existing-parts-list');
+            if (partsList) {
+                partsList.innerHTML = existingParts.map((item, index) => `
+                    <div class="existing-part-item" data-part-id="${item.partId}" data-color="${item.color}">
+                        <div class="part-image-small">
+                            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                            <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
+                                <div class="placeholder-icon-small">🧱</div>
+                            </div>
+                        </div>
+                        <div class="part-info">
+                            <div class="part-id">${item.partId}</div>
+                            <div class="part-name">${item.name || 'Unknown'}</div>
+                            <div class="part-color">${item.color}</div>
+                        </div>
+                        <div class="part-quantity">
+                            <input type="number" value="${item.quantity || 1}" min="1" max="999" class="quantity-input" data-index="${index}">
+                        </div>
+                        <div class="part-actions">
+                            <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
+                            <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Переустанавливаем обработчики событий
+                this.setupExistingPartsListeners(editor, null, cellIndex);
+                
+                // Обновляем счетчик деталей в заголовке таба
+                this.updateTabCounter(editor, existingParts.length);
+                
+                // Обновляем счетчик в заголовке модального окна
+                this.updateModalHeader(editor, existingParts.length);
+            }
+        }
+    }
+
+    getCellPartsFromData(cellData) {
+        if (!cellData) return [];
+        
+        // Если это объединенная ячейка
+        if (cellData.type === 'merged' && cellData.items) {
+            return cellData.items;
+        }
+        
+        // Если это обычная ячейка с множественными деталями
+        if (cellData.items) {
+            return cellData.items;
+        }
+        
+        // Если это старая ячейка с одной деталью
+        if (cellData.partId) {
+            return [cellData];
+        }
+        
+        return [];
+    }
+
+    updateTabCounter(editor, count) {
+        const existingTab = editor.querySelector('[data-tab="existing"]');
+        if (existingTab) {
+            existingTab.textContent = `📦 Текущие детали (${count})`;
+        }
+    }
+
+    updateModalHeader(editor, count) {
+        const cellPosition = editor.querySelector('.cell-position');
+        if (cellPosition) {
+            // Извлекаем номер ячейки из текущего текста
+            const currentText = cellPosition.textContent;
+            const cellNumber = currentText.match(/Ячейка (\d+)/);
+            if (cellNumber) {
+                cellPosition.textContent = `Ячейка ${cellNumber[1]} • ${count} деталей`;
+            }
+        }
+    }
+
+    setupTabListeners(editor) {
+        const tabButtons = editor.querySelectorAll('.tab-btn');
+        const tabPanels = editor.querySelectorAll('.tab-panel');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const targetTab = e.target.dataset.tab;
+                
+                // Убираем активный класс со всех кнопок и панелей
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabPanels.forEach(panel => panel.classList.remove('active'));
+                
+                // Активируем выбранную кнопку и панель
+                e.target.classList.add('active');
+                const targetPanel = editor.querySelector(`#tab-${targetTab}`);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                }
+            });
+        });
+    }
+
+    editPartInCell(editor, cell, cellIndex, partIndex) {
+        const cellData = this.container.cells[cellIndex];
+        if (!cellData) return;
+
+        // Получаем данные детали
+        let partData = null;
+        if (cellData.type === 'merged' && cellData.items) {
+            partData = cellData.items[partIndex];
+        } else if (cellData.items) {
+            partData = cellData.items[partIndex];
+        }
+
+        if (!partData) return;
+
+        // Переключаемся на таб добавления новой детали
+        const addNewTab = editor.querySelector('[data-tab="add-new"]');
+        const addNewPanel = editor.querySelector('#tab-add-new');
+        if (addNewTab && addNewPanel) {
+            // Убираем активный класс со всех табов
+            editor.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            editor.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            
+            // Активируем таб добавления
+            addNewTab.classList.add('active');
+            addNewPanel.classList.add('active');
+        }
+
+        // Заполняем форму данными детали
+        const partInput = editor.querySelector('#cell-part');
+        const colorInput = editor.querySelector('#cell-color');
+        const quantityInput = editor.querySelector('#cell-quantity');
+
+        if (partInput) {
+            partInput.value = partData.name ? `${partData.partId} - ${partData.name}` : partData.partId;
+        }
+        if (colorInput) {
+            colorInput.value = partData.color || '';
+        }
+        if (quantityInput) {
+            quantityInput.value = partData.quantity || 1;
+        }
+
+        // Обновляем изображение
+        const updateImage = this.setupImageUpdate(editor);
+        if (updateImage) {
+            setTimeout(() => updateImage(), 100);
+        }
+
+        // Помечаем, что это редактирование существующей детали
+        editor.dataset.editingPartIndex = partIndex;
+        
+        // Изменяем текст кнопки
+        const submitBtn = editor.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<span>💾 Сохранить изменения</span>';
         }
     }
 
@@ -665,7 +1110,7 @@ class ContainerView {
         this.container.cells[cellIndex] = null;
         this.container.updatedAt = new Date().toISOString();
 
-        cell.innerHTML = '';
+        cell.innerHTML = this.renderCellContent(null);
         cell.classList.remove('filled');
         cell.classList.add('empty');
 
