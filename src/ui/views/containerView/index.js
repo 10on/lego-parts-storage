@@ -246,7 +246,7 @@ class ContainerView {
             const newBackBtn = document.getElementById('back-to-home');
             newBackBtn.addEventListener('click', () => {
                 if (window.app) {
-                    window.app.showView('home');
+                    window.location.hash = 'home';
                 }
             });
         }

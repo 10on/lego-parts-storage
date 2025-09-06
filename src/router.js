@@ -36,6 +36,11 @@ class Router {
             title: 'Контейнеры'
         });
         
+        this.routes.set('container', {
+            view: 'container',
+            title: 'Контейнер'
+        });
+        
         this.routes.set('pile', {
             view: 'pile',
             title: 'Куча деталей'
@@ -64,6 +69,14 @@ class Router {
 
     handleRouteChange() {
         const hash = window.location.hash.slice(1) || 'home';
+        
+        // Проверяем, является ли это маршрутом контейнера с ID
+        if (hash.startsWith('container/')) {
+            const containerId = hash.split('/')[1];
+            this.navigateToContainer(containerId);
+            return;
+        }
+        
         const route = this.routes.get(hash);
         
         if (route) {
@@ -91,11 +104,30 @@ class Router {
     goTo(view) {
         const route = Array.from(this.routes.entries()).find(([key, value]) => value.view === view);
         if (route) {
+            // Обновляем hash, что вызовет hashchange event
             window.location.hash = route[0];
         }
     }
 
     getCurrentView() {
         return this.currentRoute;
+    }
+
+    navigateToContainer(containerId) {
+        // Находим контейнер по ID
+        if (window.app && window.app.containers) {
+            const container = window.app.containers.find(c => c.id === containerId);
+            if (container) {
+                // Устанавливаем контейнер и переключаемся на вид
+                window.app.containerView.setContainer(container);
+                this.navigate('container', `Контейнер: ${container.name}`);
+            } else {
+                // Контейнер не найден - перенаправляем на главную
+                this.navigate('home', 'Главная');
+            }
+        } else {
+            // Приложение не готово - перенаправляем на главную
+            this.navigate('home', 'Главная');
+        }
     }
 }

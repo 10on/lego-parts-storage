@@ -214,7 +214,8 @@ class HomeView {
             // Переключаемся на вид контейнера
             if (window.app) {
                 window.app.containerView.setContainer(container);
-                window.app.showView('container');
+                // Передаем ID контейнера в URL
+                window.location.hash = `container/${containerId}`;
             }
         }
     }

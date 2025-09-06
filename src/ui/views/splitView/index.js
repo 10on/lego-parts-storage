@@ -82,9 +82,6 @@ class SplitView {
                 <div class="container-grid-full" data-side="${side}">
                     ${this.renderFullGrid(container, side)}
                 </div>
-                <button class="btn btn-outline btn-sm" data-action="change" data-side="${side}">
-                    Изменить
-                </button>
             </div>
         `;
     }
@@ -347,12 +344,6 @@ class SplitView {
             });
         });
 
-        document.querySelectorAll('[data-action="change"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const side = e.target.dataset.side;
-                this.showContainerSelector(side);
-            });
-        });
 
         // Кнопки в заголовке
         const selectLeftBtn = document.getElementById('select-left-container');

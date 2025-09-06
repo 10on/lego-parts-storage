@@ -148,12 +148,11 @@ class LegoStorageApp {
     }
 
     setupEventListeners() {
-        // Навигация
+        // Навигация - используем роутер вместо прямого вызова showView
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const view = link.dataset.view;
-                this.showView(view);
+                // Не preventDefault - позволяем браузеру обновить hash
+                // Роутер сам обработает изменение hash через hashchange event
             });
         });
 
@@ -163,7 +162,7 @@ class LegoStorageApp {
         });
 
         document.getElementById('back-to-home')?.addEventListener('click', () => {
-            this.showView('home');
+            this.navigateTo('home');
         });
 
         // Модальные окна
@@ -205,13 +204,22 @@ class LegoStorageApp {
         return this.currentView;
     }
 
+    // Метод для программной навигации через роутер
+    navigateTo(view) {
+        if (this.router) {
+            this.router.goTo(view);
+        } else {
+            this.showView(view);
+        }
+    }
+
     updateViewContent(viewName) {
         switch (viewName) {
             case 'home':
                 this.homeView.render(this.containers);
                 break;
             case 'containers':
-                this.showView('home'); // Пока что перенаправляем на home
+                this.navigateTo('home'); // Пока что перенаправляем на home
                 break;
             case 'pile':
                 this.pileView.render(this.pileItems);

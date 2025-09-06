@@ -127,7 +127,7 @@ class SnapshotManager {
         }
         
         if (data.currentView) {
-            window.app.showView(data.currentView);
+            window.app.navigateTo(data.currentView);
         }
 
         // Обновляем отображение

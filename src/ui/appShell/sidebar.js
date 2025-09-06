@@ -65,7 +65,7 @@ class Sidebar {
         
         // Переключаемся на вид
         if (window.app) {
-            window.app.showView(view);
+            window.app.navigateTo(view);
         }
     }
 
