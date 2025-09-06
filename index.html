@@ -50,9 +50,23 @@
                     <h2 id="container-title">Кассетница</h2>
                     <div class="view-actions">
                         <button class="btn btn-outline" id="edit-mode-btn">Режим редактирования</button>
+                        <button class="btn btn-outline" id="merge-cells-btn">🔗 Объединить ячейки</button>
+                        <button class="btn btn-outline" id="split-cells-btn">✂️ Разбить ячейки</button>
                         <button class="btn btn-primary" id="save-container-btn">Сохранить</button>
                     </div>
                 </div>
+                <!-- Панель управления объединением ячеек -->
+                <div id="merge-controls" class="merge-controls hidden">
+                    <div class="merge-info">
+                        <span class="merge-instruction">Выберите ячейки для объединения (только соседние в одной линии)</span>
+                        <span class="merge-count">Выбрано: <span id="selected-cells-count">0</span></span>
+                    </div>
+                    <div class="merge-actions">
+                        <button class="btn btn-success" id="confirm-merge-btn" disabled>✓ Готово</button>
+                        <button class="btn btn-secondary" id="cancel-merge-btn">✗ Отмена</button>
+                    </div>
+                </div>
+                
                 <div class="container-grid" id="container-grid">
                     <!-- Сетка контейнера будет добавлена через JS -->
                 </div>

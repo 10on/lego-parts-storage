@@ -4,6 +4,9 @@ class ContainerView {
         this.container = null;
         this.isEditing = false;
         this.selectedCells = new Set();
+        this.isMergeMode = false;
+        this.mergeSelectedCells = new Set();
+        this.isSplitMode = false;
     }
 
     setContainer(container) {
@@ -43,11 +46,38 @@ class ContainerView {
         // Очищаем сетку
         grid.innerHTML = '';
 
-        // Создаем ячейки
+        // Создаем ячейки, пропуская объединенные
         for (let i = 0; i < rows * cols; i++) {
-            const cell = this.createCell(i, cells[i]);
+            const cellData = cells[i];
+            
+            // Пропускаем ячейки, которые являются частью объединения (но не первой)
+            if (this.isCellPartOfMerge(i, cells)) {
+                continue;
+            }
+            
+            const cell = this.createCell(i, cellData);
             grid.appendChild(cell);
         }
+        
+        // Обновляем курсоры после рендеринга
+        this.updateSplitModeCursors();
+    }
+
+    isCellPartOfMerge(cellIndex, cells) {
+        // Проверяем, является ли ячейка частью объединения (но не первой)
+        for (let i = 0; i < cells.length; i++) {
+            const cellData = cells[i];
+            if (cellData && cellData.type === 'merged') {
+                const { startIndex, cellCount } = cellData;
+                const endIndex = startIndex + cellCount - 1;
+                
+                // Если это не первая ячейка объединения, но входит в диапазон
+                if (cellIndex > startIndex && cellIndex <= endIndex) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     createCell(index, cellData) {
@@ -57,7 +87,21 @@ class ContainerView {
         
         if (cellData) {
             cell.innerHTML = this.renderCellContent(cellData);
-            cell.classList.add('filled');
+            
+            // Добавляем класс для объединенных ячеек
+            if (cellData.type === 'merged') {
+                cell.classList.add('merged');
+                this.applyMergedCellStyles(cell, cellData, index);
+                
+                // Если объединенная ячейка пустая - добавляем класс empty
+                if (!cellData.items || cellData.items.length === 0) {
+                    cell.classList.add('empty');
+                } else {
+                    cell.classList.add('filled');
+                }
+            } else {
+                cell.classList.add('filled');
+            }
         } else {
             cell.classList.add('empty');
         }
@@ -76,15 +120,59 @@ class ContainerView {
         return cell;
     }
 
+    applyMergedCellStyles(cell, cellData, startIndex) {
+        const { rows, cols } = this.container;
+        const { direction, cellCount } = cellData;
+        
+        const startRow = Math.floor(startIndex / cols) + 1; // +1 для CSS Grid (начинается с 1)
+        const startCol = (startIndex % cols) + 1;
+        
+        if (direction === 'horizontal') {
+            // Горизонтальное объединение
+            cell.style.gridColumn = `${startCol} / ${startCol + cellCount}`;
+            cell.style.gridRow = `${startRow} / ${startRow + 1}`;
+        } else {
+            // Вертикальное объединение
+            cell.style.gridColumn = `${startCol} / ${startCol + 1}`;
+            cell.style.gridRow = `${startRow} / ${startRow + cellCount}`;
+        }
+    }
+
     renderCellContent(cellData) {
-        return `
-            <div class="cell-content">
-                ${cellData.image ? `<img src="${cellData.image}" alt="${cellData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
-                <div class="cell-part-id">${cellData.partId}</div>
-                <div class="cell-quantity">${cellData.quantity}</div>
-                <div class="cell-color">${cellData.color}</div>
-            </div>
-        `;
+        if (cellData && cellData.type === 'merged') {
+            // Для объединенных ячеек рендерим ТОЧНО ТАК ЖЕ как обычные
+            if (!cellData.items || cellData.items.length === 0) {
+                // Пустая объединенная ячейка - показываем как пустую обычную
+                return '<div class="cell-content"></div>';
+            }
+            
+            // Заполненная объединенная ячейка - показываем содержимое как в обычной
+            const firstItem = cellData.items[0];
+            const totalQuantity = cellData.items.reduce((sum, item) => sum + item.quantity, 0);
+            
+            return `
+                <div class="cell-content">
+                    ${firstItem.image ? `<img src="${firstItem.image}" alt="${firstItem.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
+                    <div class="cell-part-id">${firstItem.partId}</div>
+                    <div class="cell-quantity">${totalQuantity}</div>
+                    <div class="cell-color">${firstItem.color}</div>
+                </div>
+            `;
+        }
+        
+        if (cellData) {
+            return `
+                <div class="cell-content">
+                    ${cellData.image ? `<img src="${cellData.image}" alt="${cellData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
+                    <div class="cell-part-id">${cellData.partId}</div>
+                    <div class="cell-quantity">${cellData.quantity}</div>
+                    <div class="cell-color">${cellData.color}</div>
+                </div>
+            `;
+        }
+        
+        // Пустая ячейка
+        return '<div class="cell-content"></div>';
     }
 
     setupEventListeners() {
@@ -122,11 +210,54 @@ class ContainerView {
                 }
             });
         }
+
+        // Кнопка объединения ячеек
+        const mergeBtn = document.getElementById('merge-cells-btn');
+        if (mergeBtn) {
+            mergeBtn.replaceWith(mergeBtn.cloneNode(true));
+            const newMergeBtn = document.getElementById('merge-cells-btn');
+            newMergeBtn.addEventListener('click', () => {
+                this.toggleMergeMode();
+            });
+        }
+
+        // Кнопка разбивания ячеек
+        const splitBtn = document.getElementById('split-cells-btn');
+        if (splitBtn) {
+            splitBtn.replaceWith(splitBtn.cloneNode(true));
+            const newSplitBtn = document.getElementById('split-cells-btn');
+            newSplitBtn.addEventListener('click', () => {
+                this.toggleSplitMode();
+            });
+        }
+
+        // Кнопки управления объединением
+        const confirmMergeBtn = document.getElementById('confirm-merge-btn');
+        if (confirmMergeBtn) {
+            confirmMergeBtn.replaceWith(confirmMergeBtn.cloneNode(true));
+            const newConfirmBtn = document.getElementById('confirm-merge-btn');
+            newConfirmBtn.addEventListener('click', () => {
+                this.confirmMerge();
+            });
+        }
+
+        const cancelMergeBtn = document.getElementById('cancel-merge-btn');
+        if (cancelMergeBtn) {
+            cancelMergeBtn.replaceWith(cancelMergeBtn.cloneNode(true));
+            const newCancelBtn = document.getElementById('cancel-merge-btn');
+            newCancelBtn.addEventListener('click', () => {
+                this.cancelMerge();
+            });
+        }
     }
 
     handleCellClick(e, cell) {
-        console.log('Cell clicked!', cell, this.isEditing);
-        if (this.isEditing) {
+        console.log('Cell clicked!', cell, this.isEditing, this.isMergeMode, this.isSplitMode);
+        if (this.isSplitMode) {
+            this.splitMergedCell(cell);
+        } else if (this.isMergeMode) {
+            this.toggleMergeCellSelection(cell);
+        } else if (this.isEditing) {
             this.toggleCellSelection(cell);
         } else {
             this.openCellEditor(cell);
@@ -200,15 +331,44 @@ class ContainerView {
     }
 
     renderCellEditor(cellData, cellIndex) {
+        // Определяем, является ли ячейка объединенной
+        const isMerged = cellData && cellData.type === 'merged';
+        const hasItems = isMerged && cellData.items && cellData.items.length > 0;
+        
+        // Получаем данные для отображения
+        let displayData = null;
+        if (isMerged && hasItems) {
+            // Для объединенной ячейки показываем данные первой детали
+            displayData = cellData.items[0];
+        } else if (cellData && cellData.partId) {
+            // Для обычной ячейки показываем данные ячейки
+            displayData = cellData;
+        }
+        
         const html = `
             <div class="cell-editor-header">
                 <div class="header-left">
-                    <h4>${cellData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь'}</h4>
-                    <span class="cell-position">Ячейка ${cellIndex + 1}</span>
+                    <h4>${isMerged ? '🔗 Объединенная ячейка' : (displayData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь')}</h4>
+                    <span class="cell-position">Ячейка ${cellIndex + 1}${isMerged ? ` (${cellData.cellCount} ячеек)` : ''}</span>
                 </div>
                 <button type="button" class="close-btn" id="modal-close">✕</button>
             </div>
             <div class="cell-editor-content">
+                ${isMerged && hasItems ? `
+                    <div class="merged-cell-info">
+                        <h5>Содержимое объединенной ячейки:</h5>
+                        <div class="merged-items-list">
+                            ${cellData.items.map((item, index) => `
+                                <div class="merged-item">
+                                    <span class="item-part">${item.partId}</span>
+                                    <span class="item-name">${item.name}</span>
+                                    <span class="item-color">${item.color}</span>
+                                    <span class="item-quantity">×${item.quantity}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
                 <form class="cell-editor-form">
                     <div class="form-group">
                         <label class="form-label">Деталь *</label>
@@ -218,20 +378,20 @@ class ContainerView {
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Цвет *</label>
-                            <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
+                            <input type="text" class="form-input autocomplete-input" id="cell-color" value="${displayData?.color || ''}" placeholder="Начните вводить цвет..." required>
                             <small class="form-help">Выберите цвет из каталога BrickLink</small>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Количество</label>
-                            <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1" max="999">
+                            <input type="number" class="form-input" id="cell-quantity" value="${displayData?.quantity || 1}" min="1" max="999">
                         </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
-                            <span>${cellData ? 'Сохранить изменения' : 'Добавить деталь'}</span>
+                            <span>${isMerged ? 'Добавить деталь' : (displayData ? 'Сохранить изменения' : 'Добавить деталь')}</span>
                         </button>
                         <button type="button" class="btn btn-secondary" id="cell-cancel">Отмена</button>
-                        ${cellData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
+                        ${displayData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
                     </div>
                 </form>
                 <div class="part-image-container">
@@ -251,11 +411,26 @@ class ContainerView {
     }
 
     formatPartValue(cellData) {
-        if (!cellData || !cellData.partId) return '';
-        if (cellData.name) {
-            return `${cellData.partId} - ${cellData.name}`;
+        if (!cellData) return '';
+        
+        // Если это объединенная ячейка, показываем информацию о первой детали
+        if (cellData.type === 'merged' && cellData.items && cellData.items.length > 0) {
+            const firstItem = cellData.items[0];
+            if (firstItem.name) {
+                return `${firstItem.partId} - ${firstItem.name}`;
+            }
+            return firstItem.partId;
         }
-        return cellData.partId;
+        
+        // Если это обычная ячейка
+        if (cellData.partId) {
+            if (cellData.name) {
+                return `${cellData.partId} - ${cellData.name}`;
+            }
+            return cellData.partId;
+        }
+        
+        return '';
     }
 
     setupCellEditorListeners(editor, cell, cellIndex) {
@@ -286,6 +461,9 @@ class ContainerView {
 
         // Инициализация обновления изображения
         const updateImage = this.setupImageUpdate(editor);
+        
+        // Получаем данные ячейки из контейнера
+        const cellData = this.container.cells[cellIndex];
         
         // Обновляем изображение для существующих данных ячейки
         if (cellData && cellData.partId && cellData.color) {
@@ -406,8 +584,7 @@ class ContainerView {
             }
         }
 
-        const cellData = {
-            id: `cell-${cellIndex}`,
+        const newItem = {
             partId: partId.toUpperCase(),
             name,
             quantity,
@@ -417,11 +594,29 @@ class ContainerView {
             lastUpdated: new Date().toISOString()
         };
 
-        this.container.cells[cellIndex] = cellData;
+        // Проверяем, является ли ячейка объединенной
+        const existingCellData = this.container.cells[cellIndex];
+        if (existingCellData && existingCellData.type === 'merged') {
+            // Если это объединенная ячейка, добавляем деталь в массив items
+            if (!existingCellData.items) {
+                existingCellData.items = [];
+            }
+            existingCellData.items.push(newItem);
+            existingCellData.updatedAt = new Date().toISOString();
+        } else {
+            // Если это обычная ячейка, заменяем данные
+            const cellData = {
+                id: `cell-${cellIndex}`,
+                ...newItem
+            };
+            this.container.cells[cellIndex] = cellData;
+        }
+
         this.container.updatedAt = new Date().toISOString();
 
         // Обновляем отображение ячейки
-        cell.innerHTML = this.renderCellContent(cellData);
+        const updatedCellData = this.container.cells[cellIndex];
+        cell.innerHTML = this.renderCellContent(updatedCellData);
         cell.classList.remove('empty', 'editing');
         cell.classList.add('filled');
 
@@ -695,5 +890,388 @@ class ContainerView {
         imageElement.style.display = 'none';
         imageElement.src = '';
         placeholderElement.style.display = 'flex';
+    }
+
+    // === МЕТОДЫ ОБЪЕДИНЕНИЯ ЯЧЕЕК ===
+
+    toggleMergeMode() {
+        this.isMergeMode = !this.isMergeMode;
+        
+        if (this.isMergeMode) {
+            this.startMergeMode();
+        } else {
+            this.cancelMerge();
+        }
+    }
+
+    startMergeMode() {
+        console.log('Starting merge mode');
+        this.mergeSelectedCells.clear();
+        
+        // Показываем панель управления
+        const mergeControls = document.getElementById('merge-controls');
+        if (mergeControls) {
+            mergeControls.classList.remove('hidden');
+        }
+        
+        // Добавляем класс режима объединения к контейнеру
+        const containerView = document.getElementById('container-view');
+        if (containerView) {
+            containerView.classList.add('merge-mode');
+        }
+        
+        // Обновляем кнопку
+        const mergeBtn = document.getElementById('merge-cells-btn');
+        if (mergeBtn) {
+            mergeBtn.textContent = '❌ Отменить объединение';
+            mergeBtn.classList.remove('btn-outline');
+            mergeBtn.classList.add('btn-danger');
+        }
+        
+        this.updateMergeControls();
+    }
+
+    cancelMerge() {
+        console.log('Canceling merge mode');
+        this.isMergeMode = false;
+        this.mergeSelectedCells.clear();
+        
+        // Скрываем панель управления
+        const mergeControls = document.getElementById('merge-controls');
+        if (mergeControls) {
+            mergeControls.classList.add('hidden');
+        }
+        
+        // Убираем класс режима объединения
+        const containerView = document.getElementById('container-view');
+        if (containerView) {
+            containerView.classList.remove('merge-mode');
+        }
+        
+        // Обновляем кнопку
+        const mergeBtn = document.getElementById('merge-cells-btn');
+        if (mergeBtn) {
+            mergeBtn.textContent = '🔗 Объединить ячейки';
+            mergeBtn.classList.add('btn-outline');
+            mergeBtn.classList.remove('btn-danger');
+        }
+        
+        // Убираем все классы выбора с ячеек
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            cell.classList.remove('merge-selectable', 'merge-selected', 'merge-invalid');
+        });
+    }
+
+    toggleMergeCellSelection(cell) {
+        const cellIndex = parseInt(cell.dataset.cellIndex);
+        
+        if (this.mergeSelectedCells.has(cellIndex)) {
+            // Убираем из выбора
+            this.mergeSelectedCells.delete(cellIndex);
+            cell.classList.remove('merge-selected');
+        } else {
+            // Проверяем, можно ли добавить эту ячейку
+            if (this.canAddToMergeSelection(cellIndex)) {
+                this.mergeSelectedCells.add(cellIndex);
+                cell.classList.remove('merge-invalid');
+                cell.classList.add('merge-selected');
+            } else {
+                // Показываем, что ячейка не может быть выбрана
+                cell.classList.add('merge-invalid');
+                setTimeout(() => {
+                    cell.classList.remove('merge-invalid');
+                }, 1000);
+            }
+        }
+        
+        this.updateMergeControls();
+    }
+
+    canAddToMergeSelection(cellIndex) {
+        if (this.mergeSelectedCells.size === 0) {
+            return true; // Первая ячейка всегда может быть выбрана
+        }
+        
+        const { rows, cols } = this.container;
+        const currentRow = Math.floor(cellIndex / cols);
+        const currentCol = cellIndex % cols;
+        
+        // Проверяем, что ячейка соседняя с уже выбранными
+        for (const selectedIndex of this.mergeSelectedCells) {
+            const selectedRow = Math.floor(selectedIndex / cols);
+            const selectedCol = selectedIndex % cols;
+            
+            // Проверяем, что ячейки в одной строке или одном столбце
+            const isSameRow = currentRow === selectedRow;
+            const isSameCol = currentCol === selectedCol;
+            
+            if (!isSameRow && !isSameCol) {
+                return false; // Ячейки должны быть в одной линии
+            }
+            
+            // Проверяем, что ячейки соседние
+            const rowDiff = Math.abs(currentRow - selectedRow);
+            const colDiff = Math.abs(currentCol - selectedCol);
+            
+            if (isSameRow && colDiff === 1) {
+                return true; // Соседние по горизонтали
+            }
+            if (isSameCol && rowDiff === 1) {
+                return true; // Соседние по вертикали
+            }
+        }
+        
+        return false;
+    }
+
+    updateMergeControls() {
+        const countElement = document.getElementById('selected-cells-count');
+        const confirmBtn = document.getElementById('confirm-merge-btn');
+        
+        if (countElement) {
+            countElement.textContent = this.mergeSelectedCells.size;
+        }
+        
+        if (confirmBtn) {
+            confirmBtn.disabled = this.mergeSelectedCells.size < 2;
+        }
+        
+        // Обновляем классы ячеек для режима выбора
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            if (this.isMergeMode) {
+                cell.classList.add('merge-selectable');
+            } else {
+                cell.classList.remove('merge-selectable', 'merge-selected', 'merge-invalid');
+            }
+        });
+    }
+
+    confirmMerge() {
+        if (this.mergeSelectedCells.size < 2) {
+            console.warn('Need at least 2 cells to merge');
+            return;
+        }
+        
+        console.log('Confirming merge for cells:', Array.from(this.mergeSelectedCells));
+        
+        // Создаем объединенную ячейку
+        const mergedCell = this.createMergedCell(Array.from(this.mergeSelectedCells));
+        
+        // Обновляем модель данных
+        this.updateContainerForMerge(Array.from(this.mergeSelectedCells), mergedCell);
+        
+        // Перерендериваем сетку
+        this.renderGrid();
+        
+        // Выходим из режима объединения
+        this.cancelMerge();
+        
+        // Показываем уведомление
+        if (window.app) {
+            window.app.showNotification('Ячейки успешно объединены!', 'success');
+        }
+        
+        // Автосохранение
+        if (window.app) {
+            window.app.autoSave();
+        }
+    }
+
+    createMergedCell(cellIndices) {
+        const { rows, cols } = this.container;
+        const sortedIndices = cellIndices.sort((a, b) => a - b);
+        
+        // Определяем направление объединения
+        const firstIndex = sortedIndices[0];
+        const lastIndex = sortedIndices[sortedIndices.length - 1];
+        
+        const firstRow = Math.floor(firstIndex / cols);
+        const firstCol = firstIndex % cols;
+        const lastRow = Math.floor(lastIndex / cols);
+        const lastCol = lastIndex % cols;
+        
+        const isHorizontal = firstRow === lastRow;
+        const isVertical = firstCol === lastCol;
+        
+        if (!isHorizontal && !isVertical) {
+            throw new Error('Cells must be in the same row or column');
+        }
+        
+        // Собираем данные из всех ячеек
+        const allItems = [];
+        for (const index of sortedIndices) {
+            const cellData = this.container.cells[index];
+            if (cellData) {
+                if (cellData.items) {
+                    // Если это уже объединенная ячейка
+                    allItems.push(...cellData.items);
+                } else if (cellData.partId) {
+                    // Если это обычная ячейка с деталью
+                    allItems.push({
+                        partId: cellData.partId,
+                        name: cellData.name,
+                        color: cellData.color,
+                        quantity: cellData.quantity,
+                        image: cellData.image
+                    });
+                }
+            }
+        }
+        
+        return {
+            type: 'merged',
+            direction: isHorizontal ? 'horizontal' : 'vertical',
+            cellCount: sortedIndices.length,
+            startIndex: firstIndex,
+            endIndex: lastIndex,
+            items: allItems,
+            mergedAt: new Date().toISOString()
+        };
+    }
+
+    updateContainerForMerge(cellIndices, mergedCell) {
+        const sortedIndices = cellIndices.sort((a, b) => a - b);
+        const startIndex = sortedIndices[0];
+        
+        // Заменяем первую ячейку на объединенную
+        this.container.cells[startIndex] = mergedCell;
+        
+        // Очищаем остальные ячейки
+        for (let i = 1; i < sortedIndices.length; i++) {
+            this.container.cells[sortedIndices[i]] = null;
+        }
+        
+        // Обновляем время изменения
+        this.container.updatedAt = new Date().toISOString();
+    }
+
+    // === МЕТОДЫ РАЗБИВАНИЯ ЯЧЕЕК ===
+
+    toggleSplitMode() {
+        this.isSplitMode = !this.isSplitMode;
+        
+        if (this.isSplitMode) {
+            this.startSplitMode();
+        } else {
+            this.cancelSplitMode();
+        }
+    }
+
+    startSplitMode() {
+        console.log('Starting split mode');
+        
+        // Обновляем кнопку
+        const splitBtn = document.getElementById('split-cells-btn');
+        if (splitBtn) {
+            splitBtn.textContent = '❌ Отменить разбивание';
+            splitBtn.classList.remove('btn-outline');
+            splitBtn.classList.add('btn-danger');
+        }
+        
+        // Добавляем класс режима разбивания к контейнеру
+        const containerView = document.getElementById('container-view');
+        if (containerView) {
+            containerView.classList.add('split-mode');
+        }
+        
+        // Обновляем курсор для объединенных ячеек
+        this.updateSplitModeCursors();
+    }
+
+    cancelSplitMode() {
+        console.log('Canceling split mode');
+        this.isSplitMode = false;
+        
+        // Убираем класс режима разбивания
+        const containerView = document.getElementById('container-view');
+        if (containerView) {
+            containerView.classList.remove('split-mode');
+        }
+        
+        // Обновляем кнопку
+        const splitBtn = document.getElementById('split-cells-btn');
+        if (splitBtn) {
+            splitBtn.textContent = '✂️ Разбить ячейки';
+            splitBtn.classList.add('btn-outline');
+            splitBtn.classList.remove('btn-danger');
+        }
+        
+        // Убираем курсор разбивания
+        document.querySelectorAll('.grid-cell.merged').forEach(cell => {
+            cell.classList.remove('split-selectable');
+        });
+    }
+
+    updateSplitModeCursors() {
+        document.querySelectorAll('.grid-cell.merged').forEach(cell => {
+            if (this.isSplitMode) {
+                cell.classList.add('split-selectable');
+            } else {
+                cell.classList.remove('split-selectable');
+            }
+        });
+    }
+
+    splitMergedCell(cell) {
+        const cellIndex = parseInt(cell.dataset.cellIndex);
+        const cellData = this.container.cells[cellIndex];
+        
+        if (!cellData || cellData.type !== 'merged') {
+            console.warn('Cell is not merged, cannot split');
+            return;
+        }
+        
+        console.log('Splitting merged cell:', cellData);
+        
+        // Подтверждение разбивания
+        if (window.confirm(`Разбить объединенную ячейку на ${cellData.cellCount} отдельных ячеек?`)) {
+            this.performSplit(cellIndex, cellData);
+        }
+    }
+
+    performSplit(startIndex, mergedCellData) {
+        const { cellCount, items } = mergedCellData;
+        const { rows, cols } = this.container;
+        
+        // Распределяем items по отдельным ячейкам
+        const itemsPerCell = Math.ceil(items.length / cellCount);
+        
+        for (let i = 0; i < cellCount; i++) {
+            const cellIndex = startIndex + i;
+            const startItemIndex = i * itemsPerCell;
+            const endItemIndex = Math.min(startItemIndex + itemsPerCell, items.length);
+            const cellItems = items.slice(startItemIndex, endItemIndex);
+            
+            if (cellItems.length > 0) {
+                // Создаем обычную ячейку с данными
+                this.container.cells[cellIndex] = {
+                    partId: cellItems[0].partId,
+                    name: cellItems[0].name,
+                    color: cellItems[0].color,
+                    quantity: cellItems.reduce((sum, item) => sum + item.quantity, 0),
+                    image: cellItems[0].image,
+                    items: cellItems
+                };
+            } else {
+                // Пустая ячейка
+                this.container.cells[cellIndex] = null;
+            }
+        }
+        
+        // Перерендериваем сетку
+        this.renderGrid();
+        
+        // Выходим из режима разбивания
+        this.cancelSplitMode();
+        
+        // Показываем уведомление
+        if (window.app) {
+            window.app.showNotification('Ячейка успешно разбита!', 'success');
+        }
+        
+        // Автосохранение
+        if (window.app) {
+            window.app.autoSave();
+        }
     }
 }

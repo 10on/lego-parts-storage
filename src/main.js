@@ -103,8 +103,15 @@ class LegoStorageApp {
             const hasExistingProject = localStorage.getItem('lego-storage-project') !== null;
             
             if (project.containers && project.containers.length > 0) {
-                // Данные уже есть - загружаем их
-                this.containers = project.containers;
+                // Данные уже есть - загружаем их и создаем экземпляры класса Container
+                this.containers = project.containers.map(containerData => {
+                    try {
+                        return new Container(containerData);
+                    } catch (error) {
+                        console.warn('Ошибка создания контейнера:', error, containerData);
+                        return containerData; // Возвращаем как есть, если не удалось создать
+                    }
+                });
                 this.pileItems = project.pileItems || [];
                 console.log('📦 Загружены данные из LocalStorage:', this.containers.length, 'контейнеров');
             } else if (!hasExistingProject) {
@@ -401,7 +408,15 @@ class LegoStorageApp {
     async saveProject() {
         try {
             const project = {
-                containers: this.containers,
+                containers: this.containers.map(container => {
+                    // Проверяем, является ли контейнер экземпляром класса Container
+                    if (container && typeof container.toJSON === 'function') {
+                        return container.toJSON();
+                    } else {
+                        // Если это обычный объект, возвращаем его как есть
+                        return container;
+                    }
+                }),
                 pileItems: this.pileItems,
                 settings: {
                     storageAdapter: 'local',
@@ -425,7 +440,14 @@ class LegoStorageApp {
     async loadProject() {
         try {
             const project = await this.storage.loadProject();
-            this.containers = project.containers || [];
+            this.containers = (project.containers || []).map(containerData => {
+                try {
+                    return new Container(containerData);
+                } catch (error) {
+                    console.warn('Ошибка создания контейнера:', error, containerData);
+                    return containerData; // Возвращаем как есть, если не удалось создать
+                }
+            });
             this.pileItems = project.pileItems || [];
             console.log('📦 Проект загружен из LocalStorage');
             return true;
