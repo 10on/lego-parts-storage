@@ -29,26 +29,37 @@ class LegoStorageApp {
         
         try {
             // Этап 1: Проверка локального хранилища
-            initProgress.updateStep(0, 50, 'Поиск сохраненных данных...');
+            initProgress.updateStep(0, 0, 'Поиск сохраненных данных...');
             this.storage = new LocalStorageAdapter();
+            initProgress.updateStep(0, 50, 'Хранилище инициализировано');
+            await new Promise(resolve => setTimeout(resolve, 100));
             initProgress.completeStep(0, 'Хранилище готово');
             
             // Этап 2: Инициализация IndexedDB
-            initProgress.updateStep(1, 50, 'Подключение к базе данных...');
+            initProgress.updateStep(1, 0, 'Подключение к базе данных...');
             this.imageManager = new ImageManager();
             window.imageManager = this.imageManager;
-            initProgress.completeStep(1, 'База данных подключена');
+            initProgress.updateStep(1, 50, 'База данных подключена');
+            await new Promise(resolve => setTimeout(resolve, 100));
+            initProgress.completeStep(1, 'База данных готова');
             
             // Этап 3: Загрузка каталога деталей
             initProgress.updateStep(2, 0, 'Загрузка данных BrickLink...');
             await this.loadBrickLinkData(false); // Отключаем LCX прогресс
+            initProgress.updateStep(2, 30, 'Данные BrickLink загружены');
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
             initProgress.updateStep(2, 50, 'Загрузка данных проекта...');
             await this.loadMockData();
+            initProgress.updateStep(2, 80, 'Данные проекта загружены');
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
             initProgress.completeStep(2, 'Данные загружены');
             
             // Этап 4: Инициализация компонентов
-            initProgress.updateStep(3, 25, 'Создание интерфейса...');
+            initProgress.updateStep(3, 0, 'Создание интерфейса...');
             this.sidebar = new Sidebar();
+            initProgress.updateStep(3, 15, 'Создание представлений...');
             this.homeView = new HomeView();
             this.containerView = new ContainerView();
             this.pileView = new PileView();
@@ -57,13 +68,15 @@ class LegoStorageApp {
             this.importView = new ImportView();
             this.settingsView = new SettingsView();
             
-            initProgress.updateStep(3, 75, 'Настройка навигации...');
+            initProgress.updateStep(3, 40, 'Настройка навигации...');
             this.setupEventListeners();
             this.router = new Router();
             this.router.init();
             
-            initProgress.updateStep(3, 100, 'Показ интерфейса...');
+            initProgress.updateStep(3, 70, 'Показ интерфейса...');
             this.showView('home');
+            initProgress.updateStep(3, 90, 'Интерфейс готов');
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             initProgress.completeStep(3, 'Приложение готово!');
             

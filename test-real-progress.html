@@ -26,39 +26,50 @@
             const progress = LoadingProgress.createLCXProgress();
             
             try {
-                // Имитируем реальные этапы загрузки
-                
-                // Этап 1: Инициализация базы данных
-                await new Promise(resolve => setTimeout(resolve, 500));
-                progress.updateStep(0, 50, 'Создание таблиц...');
-                await new Promise(resolve => setTimeout(resolve, 300));
-                progress.completeStep(0, 'База данных готова');
+        // Имитируем реальные этапы загрузки
+        
+        // Этап 1: Инициализация базы данных
+        progress.updateStep(0, 0, 'Создание таблиц...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        progress.updateStep(0, 50, 'Таблицы созданы');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        progress.completeStep(0, 'База данных готова');
                 
                 // Этап 2: Скачивание файла данных
-                progress.updateStep(1, 25, 'Подключение к серверу...');
+                progress.updateStep(1, 0, 'Подключение к серверу...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progress.updateStep(1, 25, 'Соединение установлено');
                 await new Promise(resolve => setTimeout(resolve, 200));
                 progress.updateStep(1, 75, 'Скачивание файла...');
-                await new Promise(resolve => setTimeout(resolve, 800));
+                await new Promise(resolve => setTimeout(resolve, 600));
                 progress.completeStep(1, 'Файл скачан');
                 
                 // Этап 3: Распаковка архива
-                progress.updateStep(2, 50, 'Извлечение данных...');
-                await new Promise(resolve => setTimeout(resolve, 600));
+                progress.updateStep(2, 0, 'Извлечение данных...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                progress.updateStep(2, 50, 'Данные извлечены');
+                await new Promise(resolve => setTimeout(resolve, 300));
                 progress.completeStep(2, 'Архив распакован');
                 
                 // Этап 4: Парсинг JSON данных
-                progress.updateStep(3, 50, 'Обработка структуры...');
-                await new Promise(resolve => setTimeout(resolve, 400));
+                progress.updateStep(3, 0, 'Обработка структуры...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progress.updateStep(3, 50, 'Структура обработана');
+                await new Promise(resolve => setTimeout(resolve, 200));
                 progress.completeStep(3, 'Данные обработаны');
                 
                 // Этап 5: Загрузка категорий
-                progress.updateStep(4, 100, 'Сохранение категорий...');
-                await new Promise(resolve => setTimeout(resolve, 200));
+                progress.updateStep(4, 0, 'Сохранение категорий...');
+                await new Promise(resolve => setTimeout(resolve, 100));
+                progress.updateStep(4, 50, 'Категории обрабатываются');
+                await new Promise(resolve => setTimeout(resolve, 100));
                 progress.completeStep(4, 'Категории загружены');
                 
                 // Этап 6: Загрузка цветов
-                progress.updateStep(5, 100, 'Сохранение цветов...');
-                await new Promise(resolve => setTimeout(resolve, 150));
+                progress.updateStep(5, 0, 'Сохранение цветов...');
+                await new Promise(resolve => setTimeout(resolve, 100));
+                progress.updateStep(5, 50, 'Цвета обрабатываются');
+                await new Promise(resolve => setTimeout(resolve, 50));
                 progress.completeStep(5, 'Цвета загружены');
                 
                 // Этап 7: Загрузка деталей (самый долгий)
