@@ -166,34 +166,89 @@
 .cell-editor {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     background-color: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--primary-color);
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     z-index: 1000;
-    padding: 1rem;
+    padding: 1.5rem;
     margin-top: 0.25rem;
+    min-width: 320px;
+    max-width: 400px;
 }
 
-.cell-editor h4 {
-    font-size: 1rem;
+.cell-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cell-editor-header h4 {
+    font-size: 1.125rem;
     font-weight: 600;
-    margin-bottom: 0.75rem;
+    margin: 0;
     color: var(--text-primary);
+}
+
+.cell-position {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background-color: var(--bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
 }
 
 .cell-editor-form {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+}
+
+.color-input-group {
+    position: relative;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.form-actions .btn {
+    flex: 1;
+    min-width: 80px;
+}
+
+/* Валидация форм */
+.form-input.error {
+    border-color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.validation-error {
+    color: var(--danger-color);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.validation-error::before {
+    content: '⚠️';
+    font-size: 0.875rem;
 }
 
 .form-label {

@@ -141,34 +141,54 @@ class ContainerView {
 
     renderCellEditor(cellData, cellIndex) {
         return `
-            <h4>${cellData ? 'Редактировать ячейку' : 'Добавить деталь'}</h4>
+            <div class="cell-editor-header">
+                <h4>${cellData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь'}</h4>
+                <span class="cell-position">Ячейка ${cellIndex + 1}</span>
+            </div>
             <form class="cell-editor-form">
-                <div class="form-group">
-                    <label class="form-label">Part ID</label>
-                    <input type="text" class="form-input" id="cell-part-id" value="${cellData?.partId || ''}" placeholder="3001">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Название</label>
-                    <input type="text" class="form-input" id="cell-name" value="${cellData?.name || ''}" placeholder="Brick 2x4">
-                </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Количество</label>
-                        <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1">
+                        <label class="form-label">Part ID *</label>
+                        <input type="text" class="form-input" id="cell-part-id" value="${cellData?.partId || ''}" placeholder="3001" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Цвет</label>
-                        <input type="text" class="form-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Red">
+                        <label class="form-label">Количество</label>
+                        <input type="number" class="form-input" id="cell-quantity" value="${cellData?.quantity || 1}" min="1" max="999">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Название детали *</label>
+                    <input type="text" class="form-input" id="cell-name" value="${cellData?.name || ''}" placeholder="Brick 2x4" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Цвет</label>
+                    <div class="color-input-group">
+                        <input type="text" class="form-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Red" list="lego-colors">
+                        <datalist id="lego-colors">
+                            <option value="Red">
+                            <option value="Blue">
+                            <option value="Yellow">
+                            <option value="Green">
+                            <option value="White">
+                            <option value="Black">
+                            <option value="Orange">
+                            <option value="Purple">
+                            <option value="Pink">
+                            <option value="Gray">
+                        </datalist>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">URL изображения</label>
-                    <input type="url" class="form-input" id="cell-image" value="${cellData?.image || ''}" placeholder="https://...">
+                    <input type="url" class="form-input" id="cell-image" value="${cellData?.image || ''}" placeholder="https://img.bricklink.com/...">
+                    <small class="form-help">Необязательно. Автоматически подставится если оставить пустым</small>
                 </div>
-                <div class="form-row">
-                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <span>${cellData ? 'Сохранить изменения' : 'Добавить деталь'}</span>
+                    </button>
                     <button type="button" class="btn btn-secondary" id="cell-cancel">Отмена</button>
-                    ${cellData ? '<button type="button" class="btn btn-danger" id="cell-clear">Очистить</button>' : ''}
+                    ${cellData ? '<button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить</button>' : ''}
                 </div>
             </form>
         `;
@@ -185,6 +205,7 @@ class ContainerView {
         });
 
         cancelBtn.addEventListener('click', () => {
+            this.clearValidationErrors();
             this.closeCellEditor();
         });
 
@@ -203,25 +224,36 @@ class ContainerView {
     }
 
     async saveCellData(cell, cellIndex, editor) {
-        const partId = editor.querySelector('#cell-part-id').value;
-        const name = editor.querySelector('#cell-name').value;
-        const quantity = parseInt(editor.querySelector('#cell-quantity').value);
-        const color = editor.querySelector('#cell-color').value;
-        const image = editor.querySelector('#cell-image').value;
+        const partId = editor.querySelector('#cell-part-id').value.trim();
+        const name = editor.querySelector('#cell-name').value.trim();
+        const quantity = parseInt(editor.querySelector('#cell-quantity').value) || 1;
+        const color = editor.querySelector('#cell-color').value.trim();
+        const image = editor.querySelector('#cell-image').value.trim();
 
-        if (!partId || !name) {
-            alert('Пожалуйста, заполните Part ID и название');
+        // Валидация
+        if (!partId) {
+            this.showValidationError(editor.querySelector('#cell-part-id'), 'Part ID обязателен');
+            return;
+        }
+
+        if (!name) {
+            this.showValidationError(editor.querySelector('#cell-name'), 'Название детали обязательно');
+            return;
+        }
+
+        if (quantity < 1 || quantity > 999) {
+            this.showValidationError(editor.querySelector('#cell-quantity'), 'Количество должно быть от 1 до 999');
             return;
         }
 
         const cellData = {
             id: `cell-${cellIndex}`,
-            partId,
+            partId: partId.toUpperCase(),
             name,
             quantity,
-            color,
+            color: color || 'Unknown',
             colorId: this.getColorId(color),
-            image,
+            image: image || this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
         };
 
@@ -230,7 +262,7 @@ class ContainerView {
 
         // Обновляем отображение ячейки
         cell.innerHTML = this.renderCellContent(cellData);
-        cell.classList.remove('empty');
+        cell.classList.remove('empty', 'editing');
         cell.classList.add('filled');
 
         this.closeCellEditor();
@@ -238,8 +270,40 @@ class ContainerView {
         // Автоматическое сохранение
         if (window.app) {
             await window.app.autoSave();
-            window.app.showNotification('Ячейка сохранена!', 'success');
+            window.app.showNotification(`Деталь "${name}" добавлена!`, 'success');
         }
+    }
+
+    showValidationError(input, message) {
+        // Удаляем предыдущие ошибки
+        this.clearValidationErrors();
+        
+        // Добавляем стиль ошибки
+        input.classList.add('error');
+        
+        // Показываем сообщение
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'validation-error';
+        errorDiv.textContent = message;
+        input.parentNode.appendChild(errorDiv);
+        
+        // Фокус на поле с ошибкой
+        input.focus();
+        input.select();
+    }
+
+    clearValidationErrors() {
+        const editor = document.querySelector('.cell-editor');
+        if (editor) {
+            editor.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+            editor.querySelectorAll('.validation-error').forEach(el => el.remove());
+        }
+    }
+
+    generateImageUrl(partId, color) {
+        // Простая генерация URL для BrickLink
+        const colorCode = this.getColorId(color) || '1';
+        return `https://img.bricklink.com/ItemImage/PN/${colorCode}/${partId}.png`;
     }
 
     async clearCellData(cell, cellIndex) {
