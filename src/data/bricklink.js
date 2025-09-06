@@ -136,6 +136,14 @@ class BrickLinkData {
     }
 
     /**
+     * Получить цвет по ID
+     */
+    async getColorById(colorId) {
+        if (!this.isLoaded) return null;
+        return this.dbAdapter.getColorById(colorId);
+    }
+
+    /**
      * Получить статистику данных
      */
     async getStats() {

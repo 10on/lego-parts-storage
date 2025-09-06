@@ -175,6 +175,7 @@ class ContainerView {
             return `
                 <div class="cell-content">
                 ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
+                ${partData.quantity ? `<div class="part-quantity-display">${partData.quantity}</div>` : ''}
                 </div>
             `;
         }
@@ -200,6 +201,7 @@ class ContainerView {
                             <div class="placeholder-icon-tiny">🧱</div>
                         </div>
                     </div>
+                    ${part.quantity ? `<div class="part-quantity-small">${part.quantity}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -318,7 +320,7 @@ class ContainerView {
         }
     }
 
-    openCellEditor(cell) {
+    async openCellEditor(cell) {
         console.log('Opening cell editor for cell:', cell);
         // Закрываем предыдущий редактор
         this.closeCellEditor();
@@ -337,7 +339,7 @@ class ContainerView {
         editor.className = 'cell-editor';
         
         try {
-            editor.innerHTML = this.renderCellEditor(cellData, cellIndex);
+            editor.innerHTML = await this.renderCellEditor(cellData, cellIndex);
             console.log('Editor HTML created successfully');
         } catch (error) {
             console.error('Error creating editor HTML:', error);
@@ -370,7 +372,7 @@ class ContainerView {
         console.log('Cell editor modal should be visible now!');
     }
 
-    renderCellEditor(cellData, cellIndex) {
+    async renderCellEditor(cellData, cellIndex) {
         // Определяем, является ли ячейка объединенной
         const isMerged = cellData && cellData.type === 'merged';
         const hasItems = isMerged && cellData.items && cellData.items.length > 0;
@@ -414,28 +416,30 @@ class ContainerView {
                         <div class="tab-panel active" id="tab-existing">
                             <div class="existing-parts-section">
                                 <div class="existing-parts-list">
-                                    ${existingParts.map((item, index) => `
-                                        <div class="existing-part-item" data-part-id="${item.partId}" data-color="${item.color}">
-                                            <div class="part-image-small">
-                                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
-                                                <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
-                                                    <div class="placeholder-icon-small">🧱</div>
+                                    ${await Promise.all(existingParts.map(async (item, index) => {
+                                        const colorName = await this.getColorName(item.colorId);
+                                        return `
+                                            <div class="existing-part-item" data-part-id="${item.partId}" data-color-id="${item.colorId}">
+                                                <div class="part-image-small">
+                                                    ${item.image ? `<img src="${item.image}" alt="${item.partId}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                                                    <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
+                                                        <div class="placeholder-icon-small">🧱</div>
+                                                    </div>
+                                                </div>
+                                                <div class="part-info">
+                                                    <div class="part-id">${item.partId}</div>
+                                                    <div class="part-color">${colorName}</div>
+                                                </div>
+                                                <div class="part-quantity">
+                                                    <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
+                                                </div>
+                                                <div class="part-actions">
+                                                    <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
+                                                    <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
                                                 </div>
                                             </div>
-                                            <div class="part-info">
-                                                <div class="part-id">${item.partId}</div>
-                                                <div class="part-name">${item.name || 'Unknown'}</div>
-                                                <div class="part-color">${item.color}</div>
-                                            </div>
-                                            <div class="part-quantity">
-                                                <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
-                                            </div>
-                                            <div class="part-actions">
-                                                <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
-                                                <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
-                                            </div>
-                                </div>
-                            `).join('')}
+                                        `;
+                                    })).then(html => html.join(''))}
                                 </div>
                                 <div class="existing-parts-actions">
                                     <button type="button" class="btn btn-danger" id="cell-clear">🗑️ Очистить все детали</button>
@@ -648,7 +652,7 @@ class ContainerView {
         editor.querySelectorAll('.btn-remove-part').forEach(button => {
             button.addEventListener('click', (e) => {
                 const index = parseInt(e.target.dataset.index);
-                this.removePartFromCell(cell, cellIndex, index);
+                this.removePartFromCell(cell, cellIndex, index, editor);
             });
         });
 
@@ -661,7 +665,7 @@ class ContainerView {
         });
     }
 
-    updatePartQuantity(cell, cellIndex, partIndex, newQuantity) {
+    async updatePartQuantity(cell, cellIndex, partIndex, newQuantity) {
         const cellData = this.container.cells[cellIndex];
         if (!cellData) return;
 
@@ -681,9 +685,18 @@ class ContainerView {
 
         // Обновляем отображение ячейки
         cell.innerHTML = this.renderCellContent(cellData);
+        
+        // Синхронизируем с основным приложением
+        if (window.app) {
+            const containerIndex = window.app.containers.findIndex(c => c.id === this.container.id);
+            if (containerIndex > -1) {
+                window.app.containers[containerIndex] = this.container;
+            }
+            await window.app.autoSave();
+        }
     }
 
-    removePartFromCell(cell, cellIndex, partIndex) {
+    async removePartFromCell(cell, cellIndex, partIndex, editor) {
         const cellData = this.container.cells[cellIndex];
         if (!cellData) return;
 
@@ -710,6 +723,15 @@ class ContainerView {
         // Обновляем отображение ячейки
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.renderCellContent(updatedCellData);
+
+        // Синхронизируем с основным приложением
+        if (window.app) {
+            const containerIndex = window.app.containers.findIndex(c => c.id === this.container.id);
+            if (containerIndex > -1) {
+                window.app.containers[containerIndex] = this.container;
+            }
+            await window.app.autoSave();
+        }
 
         // Если ячейка стала пустой, закрываем редактор
         if (!updatedCellData) {
@@ -765,9 +787,7 @@ class ContainerView {
 
         const newItem = {
             partId: partId.toUpperCase(),
-            name,
             quantity,
-            color: color || 'Unknown',
             colorId: await this.getColorId(color),
             image: await this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
@@ -840,9 +860,9 @@ class ContainerView {
                 this.container.cells[cellIndex] = { items: [newItem] };
             } else if (existingCellData.items) {
                 // Ячейка уже содержит массив деталей - добавляем к ним
-                // Проверяем, есть ли уже такая деталь (по partId и color)
+                // Проверяем, есть ли уже такая деталь (по partId и colorId)
                 const existingItemIndex = existingCellData.items.findIndex(item => 
-                    item.partId === newItem.partId && item.color === newItem.color
+                    item.partId === newItem.partId && item.colorId === newItem.colorId
                 );
                 
                 if (existingItemIndex >= 0) {
@@ -863,6 +883,14 @@ class ContainerView {
         }
 
         this.container.updatedAt = new Date().toISOString();
+        
+        // Синхронизируем с основным приложением
+        if (window.app) {
+            const containerIndex = window.app.containers.findIndex(c => c.id === this.container.id);
+            if (containerIndex > -1) {
+                window.app.containers[containerIndex] = this.container;
+            }
+        }
     }
 
     updateExistingPart(cell, cellIndex, partIndex, updatedItem) {
@@ -899,7 +927,7 @@ class ContainerView {
         }
     }
 
-    updateExistingPartsSection(editor, cellIndex) {
+    async updateExistingPartsSection(editor, cellIndex) {
         const cellData = this.container.cells[cellIndex];
         if (!cellData) return;
 
@@ -918,31 +946,40 @@ class ContainerView {
         if (existingPartsSection) {
             const partsList = existingPartsSection.querySelector('.existing-parts-list');
             if (partsList) {
-                partsList.innerHTML = existingParts.map((item, index) => `
-                    <div class="existing-part-item" data-part-id="${item.partId}" data-color="${item.color}">
-                        <div class="part-image-small">
-                            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
-                            <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
-                                <div class="placeholder-icon-small">🧱</div>
+                // Сначала показываем загрузку
+                partsList.innerHTML = '<div class="loading">Загрузка деталей...</div>';
+                
+                // Асинхронно получаем названия цветов
+                const partsHtml = await Promise.all(existingParts.map(async (item, index) => {
+                    const colorName = await this.getColorName(item.colorId);
+                    return `
+                        <div class="existing-part-item" data-part-id="${item.partId}" data-color-id="${item.colorId}">
+                            <div class="part-image-small">
+                                ${item.image ? `<img src="${item.image}" alt="${item.partId}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                                <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
+                                    <div class="placeholder-icon-small">🧱</div>
+                                </div>
+                            </div>
+                            <div class="part-info">
+                                <div class="part-id">${item.partId}</div>
+                                <div class="part-color">${colorName}</div>
+                            </div>
+                            <div class="part-quantity">
+                                <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
+                            </div>
+                            <div class="part-actions">
+                                <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
+                                <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
                             </div>
                         </div>
-                        <div class="part-info">
-                            <div class="part-id">${item.partId}</div>
-                            <div class="part-name">${item.name || 'Unknown'}</div>
-                            <div class="part-color">${item.color}</div>
-                        </div>
-                        <div class="part-quantity">
-                            <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
-                        </div>
-                        <div class="part-actions">
-                            <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
-                            <button type="button" class="btn-remove-part" data-index="${index}" title="Удалить деталь">🗑️</button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }));
+                
+                partsList.innerHTML = partsHtml.join('');
 
                 // Переустанавливаем обработчики событий
-                this.setupExistingPartsListeners(editor, null, cellIndex);
+                const cell = document.querySelector(`[data-cell-index="${cellIndex}"]`);
+                this.setupExistingPartsListeners(editor, cell, cellIndex);
                 
                 // Обновляем счетчик деталей в заголовке таба
                 this.updateTabCounter(editor, existingParts.length);
@@ -1015,7 +1052,7 @@ class ContainerView {
         });
     }
 
-    editPartInCell(editor, cell, cellIndex, partIndex) {
+    async editPartInCell(editor, cell, cellIndex, partIndex) {
         const cellData = this.container.cells[cellIndex];
         if (!cellData) return;
 
@@ -1048,10 +1085,12 @@ class ContainerView {
         const quantityInput = editor.querySelector('#cell-quantity');
 
         if (partInput) {
-            partInput.value = partData.name ? `${partData.partId} - ${partData.name}` : partData.partId;
+            partInput.value = partData.partId;
         }
         if (colorInput) {
-            colorInput.value = partData.color || '';
+            // Получаем название цвета по ID
+            const colorName = await this.getColorName(partData.colorId);
+            colorInput.value = colorName;
         }
         if (quantityInput) {
             quantityInput.value = partData.quantity || 1;
@@ -1197,6 +1236,26 @@ class ContainerView {
         } catch (error) {
             console.error('Error getting color ID:', error);
             return '0'; // Fallback к дефолтному цвету
+        }
+    }
+
+    async getColorName(colorId) {
+        if (!colorId || colorId === '0') {
+            return 'Default'; // Дефолтный цвет
+        }
+        
+        // Загружаем цвет из BrickLink данных
+        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using fallback color name');
+            return `Color ${colorId}`; // Fallback к ID цвета
+        }
+        
+        try {
+            const colorData = await window.brickLinkData.getColorById(colorId);
+            return colorData ? colorData.name : `Color ${colorId}`;
+        } catch (error) {
+            console.error('Error getting color name:', error);
+            return `Color ${colorId}`; // Fallback к ID цвета
         }
     }
 

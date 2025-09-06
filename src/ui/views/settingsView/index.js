@@ -416,23 +416,15 @@ class SettingsView {
                     localStorage.removeItem(key);
                 });
 
-                // Очищаем IndexedDB полностью (если доступен)
+                // Очищаем IndexedDB через адаптер (если доступен)
                 try {
                     if ('indexedDB' in window) {
-                        // Удаляем всю базу данных LegoStorageDB
-                        const deleteRequest = indexedDB.deleteDatabase('LegoStorageDB');
-                        await new Promise((resolve, reject) => {
-                            deleteRequest.onsuccess = () => resolve();
-                            deleteRequest.onerror = () => reject(deleteRequest.error);
-                            deleteRequest.onblocked = () => {
-                                console.warn('IndexedDB заблокирован, пропускаем полную очистку');
-                                resolve();
-                            };
-                        });
-                        console.log('🗑️ IndexedDB база данных удалена');
+                        const idbAdapter = new IndexedDBAdapter();
+                        await idbAdapter.clearAll();
+                        console.log('🗑️ IndexedDB данные очищены');
                     }
                 } catch (error) {
-                    console.warn('⚠️ Не удалось удалить IndexedDB базу данных:', error);
+                    console.warn('⚠️ Не удалось очистить IndexedDB данные:', error);
                 }
 
                 // Получаем дефолтные данные

@@ -56,8 +56,6 @@ class MockData {
             {
                 id: 'pile-1',
                 partId: '3001',
-                name: 'Brick 2x4',
-                color: 'Red',
                 colorId: '4',
                 quantity: 25,
                 image: 'https://img.bricklink.com/ItemImage/PN/4/3001.png',
@@ -66,8 +64,6 @@ class MockData {
             {
                 id: 'pile-2',
                 partId: '3002',
-                name: 'Brick 2x3',
-                color: 'Blue',
                 colorId: '1',
                 quantity: 15,
                 image: 'https://img.bricklink.com/ItemImage/PN/1/3002.png',
@@ -76,8 +72,6 @@ class MockData {
             {
                 id: 'pile-3',
                 partId: '3003',
-                name: 'Brick 2x2',
-                color: 'Yellow',
                 colorId: '3',
                 quantity: 30,
                 image: 'https://img.bricklink.com/ItemImage/PN/3/3003.png',
@@ -86,8 +80,6 @@ class MockData {
             {
                 id: 'pile-4',
                 partId: '3004',
-                name: 'Brick 1x2',
-                color: 'Green',
                 colorId: '6',
                 quantity: 50,
                 image: 'https://img.bricklink.com/ItemImage/PN/6/3004.png',
@@ -96,8 +88,6 @@ class MockData {
             {
                 id: 'pile-5',
                 partId: '3005',
-                name: 'Brick 1x1',
-                color: 'White',
                 colorId: '1',
                 quantity: 100,
                 image: 'https://img.bricklink.com/ItemImage/PN/1/3005.png',
@@ -150,20 +140,39 @@ class MockData {
         const cells = [];
         const totalCells = rows * cols;
         
+        // Используем детерминированный подход для стабильных тестовых данных
+        const seed = 12345; // Фиксированное значение для воспроизводимости
+        
         for (let i = 0; i < totalCells; i++) {
+            // Детерминированная "случайность" на основе индекса и seed
+            const pseudoRandom = ((i + seed) * 9301 + 49297) % 233280 / 233280;
+            
             // 30% вероятность заполненной ячейки
-            if (Math.random() < 0.3) {
-                const part = this.getRandomPart();
-                cells.push({
-                    id: `cell-${i}`,
+            if (pseudoRandom < 0.3) {
+                const part = this.getRandomPart(i); // Передаем индекс для детерминированности
+                
+                // Создаем ячейку в НОВОМ формате с массивом items
+                const items = [{
                     partId: part.partId,
-                    name: part.name,
-                    color: part.color,
                     colorId: part.colorId,
-                    quantity: Math.floor(Math.random() * 20) + 1,
+                    quantity: Math.floor(pseudoRandom * 20) + 1,
                     image: part.image,
                     lastUpdated: new Date().toISOString()
-                });
+                }];
+                
+                // 10% вероятность ячейки с множественными деталями
+                if (pseudoRandom > 0.2 && pseudoRandom < 0.25) {
+                    const secondPart = this.getRandomPart(i + 1000); // Другая деталь
+                    items.push({
+                        partId: secondPart.partId,
+                        colorId: secondPart.colorId,
+                        quantity: Math.floor(pseudoRandom * 10) + 1,
+                        image: secondPart.image,
+                        lastUpdated: new Date().toISOString()
+                    });
+                }
+                
+                cells.push({ items });
             } else {
                 cells.push(null);
             }
@@ -172,46 +181,37 @@ class MockData {
         return cells;
     }
 
-    getRandomPart() {
+    getRandomPart(index = 0) {
         const parts = [
             {
                 partId: '3001',
-                name: 'Brick 2x4',
-                color: 'Red',
                 colorId: '4',
                 image: 'https://img.bricklink.com/ItemImage/PN/4/3001.png'
             },
             {
                 partId: '3002',
-                name: 'Brick 2x3',
-                color: 'Blue',
                 colorId: '1',
                 image: 'https://img.bricklink.com/ItemImage/PN/1/3002.png'
             },
             {
                 partId: '3003',
-                name: 'Brick 2x2',
-                color: 'Yellow',
                 colorId: '3',
                 image: 'https://img.bricklink.com/ItemImage/PN/3/3003.png'
             },
             {
                 partId: '3004',
-                name: 'Brick 1x2',
-                color: 'Green',
                 colorId: '6',
                 image: 'https://img.bricklink.com/ItemImage/PN/6/3004.png'
             },
             {
                 partId: '3005',
-                name: 'Brick 1x1',
-                color: 'White',
                 colorId: '1',
                 image: 'https://img.bricklink.com/ItemImage/PN/1/3005.png'
             }
         ];
         
-        return parts[Math.floor(Math.random() * parts.length)];
+        // Детерминированный выбор на основе индекса
+        return parts[index % parts.length];
     }
 
     getContainers() {

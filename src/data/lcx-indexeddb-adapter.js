@@ -146,27 +146,23 @@ class LCXIndexedDBAdapter {
 
             // Шаг 3: Сохраняем категории
             if (progressCallback) progressCallback(3, 0, `Сохранение ${transformedData.categories.length} категорий...`);
-            await this.saveBulkDataWithProgress('categories', transformedData.categories, null); // БЕЗ progressCallback
-            if (progressCallback) progressCallback(3, 100, `Категории сохранены!`);
+            await this.saveBulkDataWithProgress('categories', transformedData.categories, progressCallback);
             console.log(`📦 Saved ${transformedData.categories.length} categories`);
 
             // Шаг 4: Сохраняем цвета
             if (progressCallback) progressCallback(4, 0, `Сохранение ${transformedData.colors.length} цветов...`);
-            await this.saveBulkDataWithProgress('colors', transformedData.colors, null); // БЕЗ progressCallback
-            if (progressCallback) progressCallback(4, 100, `Цвета сохранены!`);
+            await this.saveBulkDataWithProgress('colors', transformedData.colors, progressCallback);
             console.log(`🎨 Saved ${transformedData.colors.length} colors`);
 
             // Шаг 5: Сохраняем детали (самый большой массив)
             if (progressCallback) progressCallback(5, 0, `Сохранение ${transformedData.parts.length} деталей...`);
-            await this.saveBulkDataWithProgress('parts', transformedData.parts, null); // БЕЗ progressCallback
-            if (progressCallback) progressCallback(5, 100, `Детали сохранены!`);
+            await this.saveBulkDataWithProgress('parts', transformedData.parts, progressCallback);
             console.log(`🧱 Saved ${transformedData.parts.length} parts`);
 
             // Шаг 6: Сохраняем связи деталь-цвет (если есть)
             if (transformedData.partColors && transformedData.partColors.length > 0) {
                 if (progressCallback) progressCallback(6, 0, `Сохранение ${transformedData.partColors.length} связей...`);
-                await this.saveBulkDataWithProgress('partColors', transformedData.partColors, null); // БЕЗ progressCallback
-                if (progressCallback) progressCallback(6, 100, `Связи сохранены!`);
+                await this.saveBulkDataWithProgress('partColors', transformedData.partColors, progressCallback);
                 console.log(`🔗 Saved ${transformedData.partColors.length} part-color relations`);
             } else {
                 if (progressCallback) progressCallback(6, 0, 'Связи деталь-цвет отсутствуют');
@@ -205,8 +201,9 @@ class LCXIndexedDBAdapter {
      * Массовое сохранение данных с отслеживанием прогресса
      */
     async saveBulkDataWithProgress(storeName, data, progressCallback) {
-        const batchSize = 500; // Меньший размер батча для более частых обновлений прогресса
+        const batchSize = 200; // Еще меньший размер батча для более частых обновлений
         const totalItems = data.length;
+        let processedItems = 0;
         
         for (let i = 0; i < totalItems; i += batchSize) {
             const batch = data.slice(i, i + batchSize);
@@ -230,17 +227,33 @@ class LCXIndexedDBAdapter {
             // Ждем завершения транзакции
             await this.waitForTransaction(transaction);
             
-            // Обновляем прогресс
-            const progress = Math.min(1, (i + batchSize) / totalItems);
+            processedItems += batch.length;
+            
+            // Обновляем прогресс с более детальной информацией
+            const progress = Math.min(100, Math.round((processedItems / totalItems) * 100));
             if (progressCallback) {
-                progressCallback(progress);
+                const stepNumber = this.getStepNumberForStore(storeName);
+                progressCallback(stepNumber, progress, `Сохранено ${processedItems} из ${totalItems} записей`);
             }
             
-            // Даем браузеру время на обновление UI
-            if (i % (batchSize * 4) === 0) {
-                await new Promise(resolve => setTimeout(resolve, 10));
+            // Даем браузеру время на обновление UI каждые 2 батча
+            if (i % (batchSize * 2) === 0) {
+                await new Promise(resolve => setTimeout(resolve, 5));
             }
         }
+    }
+
+    /**
+     * Получает номер шага для конкретного хранилища
+     */
+    getStepNumberForStore(storeName) {
+        const stepMap = {
+            'categories': 3,
+            'colors': 4,
+            'parts': 5,
+            'partColors': 6
+        };
+        return stepMap[storeName] || 3;
     }
 
     /**
@@ -421,6 +434,22 @@ class LCXIndexedDBAdapter {
         
         return new Promise((resolve) => {
             const request = index.get(colorName);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+        });
+    }
+
+    /**
+     * Получить цвет по ID
+     */
+    async getColorById(colorId) {
+        if (!this.db) return null;
+        
+        const transaction = this.db.transaction(['colors'], 'readonly');
+        const store = transaction.objectStore('colors');
+        
+        return new Promise((resolve) => {
+            const request = store.get(parseInt(colorId));
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => resolve(null);
         });

@@ -13,29 +13,32 @@ class LCXParser {
     /**
      * Парсит LCX файл (JSON или сжатый JSON.gz)
      * @param {File|Blob|string} input - Файл, blob или JSON строка
+     * @param {Function} progressCallback - Функция обратного вызова для прогресса
      * @returns {Promise<Object>} Распарсенные данные
      */
-    async parse(input) {
+    async parse(input, progressCallback = null) {
         let jsonString;
 
         try {
             if (typeof input === 'string') {
                 jsonString = input;
+                if (progressCallback) progressCallback(2, 100, 'Файл уже загружен');
             } else if (input instanceof File || input instanceof Blob) {
                 // Проверяем, сжат ли файл
                 if (input.name && input.name.endsWith('.gz')) {
-                    jsonString = await this.decompressGzip(input);
+                    jsonString = await this.decompressGzip(input, progressCallback);
                 } else {
-                    jsonString = await input.text();
+                    jsonString = await this.loadFileWithProgress(input, progressCallback);
                 }
             } else {
                 throw new Error('Неподдерживаемый тип входных данных');
             }
 
+            if (progressCallback) progressCallback(2, 100, 'Парсинг JSON данных...');
             const lcxData = JSON.parse(jsonString);
             await this.validate(lcxData);
             
-            return await this.transform(lcxData);
+            return await this.transform(lcxData, progressCallback);
         } catch (error) {
             console.error('Ошибка парсинга LCX:', error);
             throw new Error(`Ошибка парсинга LCX: ${error.message}`);
@@ -144,22 +147,28 @@ class LCXParser {
         };
 
         // Парсим категории
-        if (progressCallback) progressCallback(0, 60, 'Парсинг категорий...');
+        if (progressCallback) progressCallback(3, 10, 'Парсинг категорий...');
         transformedData.categories = this.transformTable(lcxData.tables.categories);
+        if (progressCallback) progressCallback(3, 30, `Обработано ${transformedData.categories.length} категорий`);
         
         // Парсим цвета
-        if (progressCallback) progressCallback(0, 65, 'Парсинг цветов...');
+        if (progressCallback) progressCallback(3, 50, 'Парсинг цветов...');
         transformedData.colors = this.transformTable(lcxData.tables.colors);
+        if (progressCallback) progressCallback(3, 70, `Обработано ${transformedData.colors.length} цветов`);
         
         // Парсим детали (самый большой массив)
-        if (progressCallback) progressCallback(0, 70, 'Парсинг деталей...');
+        if (progressCallback) progressCallback(3, 80, 'Парсинг деталей...');
         transformedData.parts = this.transformTable(lcxData.tables.parts);
+        if (progressCallback) progressCallback(3, 90, `Обработано ${transformedData.parts.length} деталей`);
 
         if (lcxData.tables.partColors) {
+            if (progressCallback) progressCallback(3, 95, 'Парсинг связей деталь-цвет...');
             transformedData.partColors = this.transformTable(lcxData.tables.partColors);
+            if (progressCallback) progressCallback(3, 100, `Обработано ${transformedData.partColors.length} связей`);
         }
 
         // Применяем специфичные трансформации
+        if (progressCallback) progressCallback(4, 0, 'Применение трансформаций...');
         this.postProcessCategories(transformedData.categories);
         this.postProcessColors(transformedData.colors);
         this.postProcessParts(transformedData.parts);
@@ -168,6 +177,7 @@ class LCXParser {
             this.postProcessPartColors(transformedData.partColors);
         }
 
+        if (progressCallback) progressCallback(4, 100, 'Трансформация завершена');
         return transformedData;
     }
 
@@ -263,18 +273,88 @@ class LCXParser {
     }
 
     /**
-     * Декомпрессия GZIP (для браузера)
+     * Загрузка файла с отслеживанием прогресса
      */
-    async decompressGzip(file) {
+    async loadFileWithProgress(file, progressCallback = null) {
+        if (progressCallback) progressCallback(2, 0, 'Начинаем загрузку файла...');
+        
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onprogress = (event) => {
+                if (event.lengthComputable && progressCallback) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressCallback(2, percentComplete, `Загружено ${Math.round(event.loaded / 1024 / 1024)}MB из ${Math.round(event.total / 1024 / 1024)}MB`);
+                }
+            };
+            
+            reader.onload = () => {
+                if (progressCallback) progressCallback(2, 100, 'Файл загружен');
+                resolve(reader.result);
+            };
+            
+            reader.onerror = () => {
+                reject(new Error('Ошибка чтения файла'));
+            };
+            
+            reader.readAsText(file);
+        });
+    }
+
+    /**
+     * Декомпрессия GZIP (для браузера) с отслеживанием прогресса
+     */
+    async decompressGzip(file, progressCallback = null) {
+        if (progressCallback) progressCallback(2, 0, 'Начинаем распаковку архива...');
+        
         // Используем CompressionStream API если доступно
         if ('DecompressionStream' in window) {
-            const stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
-            const response = new Response(stream);
-            return await response.text();
+            try {
+                const stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
+                const response = new Response(stream);
+                
+                // Создаем reader для отслеживания прогресса
+                const reader = response.body.getReader();
+                const chunks = [];
+                let receivedLength = 0;
+                const contentLength = file.size; // Приблизительный размер
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    chunks.push(value);
+                    receivedLength += value.length;
+                    
+                    if (progressCallback) {
+                        const percentComplete = Math.min(100, Math.round((receivedLength / contentLength) * 100));
+                        progressCallback(2, percentComplete, `Распаковано ${Math.round(receivedLength / 1024 / 1024)}MB`);
+                    }
+                }
+                
+                // Собираем все чанки в один Uint8Array
+                const allChunks = new Uint8Array(receivedLength);
+                let position = 0;
+                for (const chunk of chunks) {
+                    allChunks.set(chunk, position);
+                    position += chunk.length;
+                }
+                
+                // Конвертируем в текст
+                const decoder = new TextDecoder();
+                const result = decoder.decode(allChunks);
+                
+                if (progressCallback) progressCallback(2, 100, 'Архив распакован');
+                return result;
+            } catch (error) {
+                console.warn('Ошибка при распаковке GZIP, пытаемся прочитать как обычный файл:', error);
+                return await this.loadFileWithProgress(file, progressCallback);
+            }
         } else {
             // Fallback: предполагаем что файл не сжат или используем библиотеку
             console.warn('DecompressionStream не поддерживается, пытаемся прочитать как обычный JSON');
-            return await file.text();
+            return await this.loadFileWithProgress(file, progressCallback);
         }
     }
 

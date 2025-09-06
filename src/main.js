@@ -106,6 +106,10 @@ class LegoStorageApp {
                 // Данные уже есть - загружаем их и создаем экземпляры класса Container
                 this.containers = project.containers.map(containerData => {
                     try {
+                        // Конвертируем старый формат ячеек в новый
+                        if (containerData.cells) {
+                            containerData.cells = this.convertCellsToNewFormat(containerData.cells);
+                        }
                         return new Container(containerData);
                     } catch (error) {
                         console.warn('Ошибка создания контейнера:', error, containerData);
@@ -475,6 +479,35 @@ class LegoStorageApp {
         this.autoSaveTimeout = setTimeout(async () => {
             await this.saveProject();
         }, 1000); // Сохраняем через 1 секунду после последнего изменения
+    }
+
+    convertCellsToNewFormat(cells) {
+        return cells.map(cell => {
+            if (cell === null) {
+                return null;
+            }
+            
+            // Если уже новый формат - возвращаем как есть
+            if (cell.items && Array.isArray(cell.items)) {
+                return cell;
+            }
+            
+            // Если старый формат - конвертируем в новый
+            if (cell.partId) {
+                return {
+                    items: [{
+                        partId: cell.partId,
+                        colorId: cell.colorId,
+                        quantity: cell.quantity,
+                        image: cell.image,
+                        lastUpdated: cell.lastUpdated || new Date().toISOString()
+                    }]
+                };
+            }
+            
+            // Неизвестный формат - возвращаем как есть
+            return cell;
+        });
     }
 
     showNotification(message, type = 'info') {

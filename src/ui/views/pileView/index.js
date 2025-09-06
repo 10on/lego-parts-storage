@@ -5,7 +5,7 @@ class PileView {
         this.selectedItems = new Set();
     }
 
-    render(pileItems = []) {
+    async render(pileItems = []) {
         this.pileItems = pileItems;
         const container = document.getElementById('pile-content');
         if (!container) return;
@@ -13,7 +13,8 @@ class PileView {
         if (pileItems.length === 0) {
             container.innerHTML = this.renderEmptyState();
         } else {
-            container.innerHTML = pileItems.map(item => this.renderPileItem(item)).join('');
+            const itemsHtml = await Promise.all(pileItems.map(item => this.renderPileItem(item)));
+            container.innerHTML = itemsHtml.join('');
         }
 
         this.setupEventListeners();
@@ -31,16 +32,16 @@ class PileView {
         `;
     }
 
-    renderPileItem(item) {
+    async renderPileItem(item) {
         const lastUsed = new Date(item.lastUsed).toLocaleDateString('ru-RU');
+        const colorName = await this.getColorName(item.colorId);
         
         return `
             <div class="pile-item" data-item-id="${item.id}">
-                <img src="${item.image}" alt="${item.name}" class="pile-item-image" onerror="this.style.display='none'">
+                <img src="${item.image}" alt="${item.partId}" class="pile-item-image" onerror="this.style.display='none'">
                 <div class="pile-item-info">
-                    <div class="pile-item-name">${item.name}</div>
                     <div class="pile-item-part-id">Part ID: ${item.partId}</div>
-                    <div class="pile-item-color">Цвет: ${item.color}</div>
+                    <div class="pile-item-color">Цвет: ${colorName}</div>
                     <div class="pile-item-last-used">Использовано: ${lastUsed}</div>
                 </div>
                 <div class="pile-item-actions">
@@ -183,15 +184,22 @@ class PileView {
             item.quantity = newQuantity;
             item.lastUsed = new Date().toISOString();
             
-            // Автоматическое сохранение
+            // Обновляем данные в основном приложении
             if (window.app) {
+                const appItem = window.app.pileItems.find(i => i.id === itemId);
+                if (appItem) {
+                    appItem.quantity = newQuantity;
+                    appItem.lastUsed = item.lastUsed;
+                }
+                
+                // Автоматическое сохранение
                 await window.app.autoSave();
                 window.app.showNotification('Количество обновлено!', 'success');
             }
         }
     }
 
-    editItem(itemId) {
+    async editItem(itemId) {
         const item = this.pileItems.find(i => i.id === itemId);
         if (!item) return;
 
@@ -201,10 +209,6 @@ class PileView {
                     <label class="form-label">Part ID</label>
                     <input type="text" class="form-input" id="edit-part-id" value="${item.partId}" required>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Название</label>
-                    <input type="text" class="form-input" id="edit-name" value="${item.name}" required>
-                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Количество</label>
@@ -212,7 +216,7 @@ class PileView {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Цвет</label>
-                        <input type="text" class="form-input" id="edit-color" value="${item.color}">
+                        <input type="text" class="form-input" id="edit-color" value="${await this.getColorName(item.colorId)}">
                     </div>
                 </div>
                 <div class="form-group">
@@ -235,9 +239,8 @@ class PileView {
         }
     }
 
-    saveItemChanges(itemId) {
+    async saveItemChanges(itemId) {
         const partId = document.getElementById('edit-part-id').value;
-        const name = document.getElementById('edit-name').value;
         const quantity = parseInt(document.getElementById('edit-quantity').value);
         const color = document.getElementById('edit-color').value;
         const image = document.getElementById('edit-image').value;
@@ -245,31 +248,47 @@ class PileView {
         const item = this.pileItems.find(i => i.id === itemId);
         if (item) {
             item.partId = partId;
-            item.name = name;
             item.quantity = quantity;
-            item.color = color;
+            item.colorId = await this.getColorId(color);
             item.image = image;
             item.lastUsed = new Date().toISOString();
 
-            this.render(this.pileItems);
-            
+            // Обновляем данные в основном приложении
             if (window.app) {
+                const appItem = window.app.pileItems.find(i => i.id === itemId);
+                if (appItem) {
+                    Object.assign(appItem, item);
+                }
+                
+                // Автоматическое сохранение
+                await window.app.autoSave();
                 window.app.hideModal();
                 window.app.showNotification('Деталь обновлена!', 'success');
             }
+
+            this.render(this.pileItems);
         }
     }
 
-    deleteItem(itemId) {
+    async deleteItem(itemId) {
         if (confirm('Вы уверены, что хотите удалить эту деталь из кучи?')) {
             const index = this.pileItems.findIndex(i => i.id === itemId);
             if (index > -1) {
                 this.pileItems.splice(index, 1);
-                this.render(this.pileItems);
                 
+                // Обновляем данные в основном приложении
                 if (window.app) {
+                    const appIndex = window.app.pileItems.findIndex(i => i.id === itemId);
+                    if (appIndex > -1) {
+                        window.app.pileItems.splice(appIndex, 1);
+                    }
+                    
+                    // Автоматическое сохранение
+                    await window.app.autoSave();
                     window.app.showNotification('Деталь удалена!', 'success');
                 }
+                
+                this.render(this.pileItems);
             }
         }
     }
@@ -359,10 +378,6 @@ class PileView {
                     <label class="form-label">Part ID</label>
                     <input type="text" class="form-input" id="new-part-id" placeholder="3001" required>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Название</label>
-                    <input type="text" class="form-input" id="new-name" placeholder="Brick 2x4" required>
-                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Количество (опционально)</label>
@@ -395,7 +410,6 @@ class PileView {
 
     async addNewItem() {
         const partId = document.getElementById('new-part-id').value;
-        const name = document.getElementById('new-name').value;
         const quantityValue = document.getElementById('new-quantity').value;
         const quantity = quantityValue ? parseInt(quantityValue) : null;
         const color = document.getElementById('new-color').value;
@@ -404,8 +418,6 @@ class PileView {
         const newItem = {
             id: `pile-${Date.now()}`,
             partId,
-            name,
-            color,
             colorId: await this.getColorId(color),
             quantity,
             image,
@@ -413,14 +425,18 @@ class PileView {
         };
 
         this.pileItems.push(newItem);
-        this.render(this.pileItems);
         
-        // Автоматическое сохранение
+        // Добавляем в основное приложение
         if (window.app) {
+            window.app.pileItems.push(newItem);
+            
+            // Автоматическое сохранение
             await window.app.autoSave();
             window.app.hideModal();
             window.app.showNotification('Деталь добавлена в кучу!', 'success');
         }
+        
+        this.render(this.pileItems);
     }
 
     showDistributeModal() {
@@ -446,6 +462,26 @@ class PileView {
         } catch (error) {
             console.error('Error getting color ID:', error);
             return '1'; // Fallback к белому цвету
+        }
+    }
+
+    async getColorName(colorId) {
+        if (!colorId || colorId === '0') {
+            return 'Default'; // Дефолтный цвет
+        }
+        
+        // Загружаем цвет из BrickLink данных
+        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using fallback color name');
+            return `Color ${colorId}`; // Fallback к ID цвета
+        }
+        
+        try {
+            const colorData = await window.brickLinkData.getColorById(colorId);
+            return colorData ? colorData.name : `Color ${colorId}`;
+        } catch (error) {
+            console.error('Error getting color name:', error);
+            return `Color ${colorId}`; // Fallback к ID цвета
         }
     }
 }

@@ -56,7 +56,7 @@ class LoadingProgress {
 
         this.currentStep = stepIndex;
         
-        // Отображаем только текущий шаг
+        // Плавно обновляем прогресс
         this.renderCurrentStep(stepIndex, progress, details);
     }
 
@@ -72,6 +72,10 @@ class LoadingProgress {
 
         const isCompleted = progress >= 100;
         const stepClass = isCompleted ? 'completed' : 'active';
+        
+        // Проверяем, существует ли уже элемент прогресса
+        const existingProgressBar = container.querySelector('.progress-bar');
+        const shouldAnimate = existingProgressBar && progress > 0;
         
         container.innerHTML = `
             <div class="progress-step ${stepClass}">
@@ -92,6 +96,14 @@ class LoadingProgress {
                 </div>
             </div>
         `;
+        
+        // Добавляем анимацию для плавного перехода
+        if (shouldAnimate) {
+            const progressBar = container.querySelector('.progress-bar');
+            if (progressBar) {
+                progressBar.style.transition = 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            }
+        }
     }
 
     /**
