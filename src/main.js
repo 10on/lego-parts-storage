@@ -5,13 +5,16 @@ class LegoStorageApp {
         this.containers = [];
         this.pileItems = [];
         this.mockData = new MockData();
-        this.storage = new LocalStorageAdapter();
+        this.storage = null; // Инициализируем позже
         
         this.init();
     }
 
     async init() {
         console.log('🚀 Инициализация LEGO Storage Mapper');
+        
+        // Инициализация storage
+        this.storage = new LocalStorageAdapter();
         
         // Инициализация компонентов
         this.sidebar = new Sidebar();
