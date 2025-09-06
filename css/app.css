@@ -654,12 +654,26 @@ body {
     gap: 1px;
     padding: 0.5rem;
     border-radius: var(--border-radius);
-    max-width: 200px;
-    max-height: 150px;
+    width: 180px;
+    height: 120px;
     overflow: hidden;
     margin: 0 auto;
-    /* Адаптивный размер для больших сеток */
-    min-height: 60px;
+    /* Фиксированный размер контура, адаптивный размер ячеек */
+}
+
+.preview-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: bold;
+    min-height: 1rem;
+    aspect-ratio: 1;
+    border-radius: 2px;
+}
+
+.preview-cell.filled {
+    color: #666;
 }
 
 /* Удален .grid-size-info - больше не используется */
