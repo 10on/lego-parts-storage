@@ -167,7 +167,7 @@ class PileView {
         this.updateQuantity(input);
     }
 
-    updateQuantity(input) {
+    async updateQuantity(input) {
         const itemId = input.closest('.pile-item').dataset.itemId;
         const newQuantity = parseInt(input.value);
         
@@ -181,7 +181,9 @@ class PileView {
             item.quantity = newQuantity;
             item.lastUsed = new Date().toISOString();
             
+            // Автоматическое сохранение
             if (window.app) {
+                await window.app.autoSave();
                 window.app.showNotification('Количество обновлено!', 'success');
             }
         }
@@ -389,7 +391,7 @@ class PileView {
         }
     }
 
-    addNewItem() {
+    async addNewItem() {
         const partId = document.getElementById('new-part-id').value;
         const name = document.getElementById('new-name').value;
         const quantity = parseInt(document.getElementById('new-quantity').value);
@@ -410,7 +412,9 @@ class PileView {
         this.pileItems.push(newItem);
         this.render(this.pileItems);
         
+        // Автоматическое сохранение
         if (window.app) {
+            await window.app.autoSave();
             window.app.hideModal();
             window.app.showNotification('Деталь добавлена в кучу!', 'success');
         }

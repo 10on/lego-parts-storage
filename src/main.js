@@ -5,6 +5,7 @@ class LegoStorageApp {
         this.containers = [];
         this.pileItems = [];
         this.mockData = new MockData();
+        this.storage = new LocalStorageAdapter();
         
         this.init();
     }
@@ -39,9 +40,30 @@ class LegoStorageApp {
     }
 
     async loadMockData() {
-        this.containers = this.mockData.getContainers();
-        this.pileItems = this.mockData.getPileItems();
-        console.log('📦 Загружены тестовые данные:', this.containers.length, 'контейнеров');
+        try {
+            // Загружаем данные из LocalStorage
+            const project = await this.storage.loadProject();
+            
+            if (project.containers && project.containers.length > 0) {
+                // Данные уже есть - загружаем их
+                this.containers = project.containers;
+                this.pileItems = project.pileItems || [];
+                console.log('📦 Загружены данные из LocalStorage:', this.containers.length, 'контейнеров');
+            } else {
+                // Новый пользователь - создаем тестовые данные
+                this.containers = this.mockData.getContainers();
+                this.pileItems = this.mockData.getPileItems();
+                
+                // Сохраняем тестовые данные в LocalStorage
+                await this.saveProject();
+                console.log('🆕 Созданы тестовые данные для нового пользователя:', this.containers.length, 'контейнеров');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки данных:', error);
+            // В случае ошибки создаем тестовые данные
+            this.containers = this.mockData.getContainers();
+            this.pileItems = this.mockData.getPileItems();
+        }
     }
 
     setupEventListeners() {
@@ -179,7 +201,7 @@ class LegoStorageApp {
         });
     }
 
-    createContainer() {
+    async createContainer() {
         const name = document.getElementById('container-name').value;
         const type = document.getElementById('container-type').value;
         const rows = parseInt(document.getElementById('grid-rows').value);
@@ -192,14 +214,67 @@ class LegoStorageApp {
             rows,
             cols,
             cells: Array(rows * cols).fill(null),
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
         
         this.containers.push(container);
         this.hideModal();
         this.updateViewContent('home');
         
+        // Автоматическое сохранение
+        await this.autoSave();
+        
         this.showNotification('Контейнер создан!', 'success');
+    }
+
+    async saveProject() {
+        try {
+            const project = {
+                containers: this.containers,
+                pileItems: this.pileItems,
+                settings: {
+                    storageAdapter: 'local',
+                    imageSource: 'bricklink',
+                    theme: 'light'
+                },
+                updatedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            await this.storage.saveProject(project);
+            console.log('💾 Проект сохранен в LocalStorage');
+            return true;
+        } catch (error) {
+            console.error('Ошибка сохранения проекта:', error);
+            this.showNotification('Ошибка сохранения данных', 'error');
+            return false;
+        }
+    }
+
+    async loadProject() {
+        try {
+            const project = await this.storage.loadProject();
+            this.containers = project.containers || [];
+            this.pileItems = project.pileItems || [];
+            console.log('📦 Проект загружен из LocalStorage');
+            return true;
+        } catch (error) {
+            console.error('Ошибка загрузки проекта:', error);
+            this.showNotification('Ошибка загрузки данных', 'error');
+            return false;
+        }
+    }
+
+    // Автоматическое сохранение при изменениях
+    async autoSave() {
+        if (this.autoSaveTimeout) {
+            clearTimeout(this.autoSaveTimeout);
+        }
+        
+        this.autoSaveTimeout = setTimeout(async () => {
+            await this.saveProject();
+        }, 1000); // Сохраняем через 1 секунду после последнего изменения
     }
 
     showNotification(message, type = 'info') {

@@ -202,7 +202,7 @@ class ContainerView {
         }, { once: true });
     }
 
-    saveCellData(cell, cellIndex, editor) {
+    async saveCellData(cell, cellIndex, editor) {
         const partId = editor.querySelector('#cell-part-id').value;
         const name = editor.querySelector('#cell-name').value;
         const quantity = parseInt(editor.querySelector('#cell-quantity').value);
@@ -235,12 +235,14 @@ class ContainerView {
 
         this.closeCellEditor();
         
+        // Автоматическое сохранение
         if (window.app) {
+            await window.app.autoSave();
             window.app.showNotification('Ячейка сохранена!', 'success');
         }
     }
 
-    clearCellData(cell, cellIndex) {
+    async clearCellData(cell, cellIndex) {
         this.container.cells[cellIndex] = null;
         this.container.updatedAt = new Date().toISOString();
 
@@ -250,7 +252,9 @@ class ContainerView {
 
         this.closeCellEditor();
         
+        // Автоматическое сохранение
         if (window.app) {
+            await window.app.autoSave();
             window.app.showNotification('Ячейка очищена!', 'success');
         }
     }
@@ -286,12 +290,16 @@ class ContainerView {
         }
     }
 
-    saveContainer() {
+    async saveContainer() {
         if (window.app) {
             // Обновляем контейнер в данных приложения
             const containerIndex = window.app.containers.findIndex(c => c.id === this.container.id);
             if (containerIndex > -1) {
+                this.container.updatedAt = new Date().toISOString();
                 window.app.containers[containerIndex] = this.container;
+                
+                // Автоматическое сохранение
+                await window.app.autoSave();
             }
             
             window.app.showNotification('Контейнер сохранен!', 'success');
