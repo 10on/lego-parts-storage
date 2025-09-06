@@ -111,9 +111,9 @@ class SettingsView {
                     <button class="btn btn-outline" id="reset-settings-btn">Сбросить настройки</button>
                 </div>
                 <div class="settings-actions danger-zone">
-                    <h4>Опасная зона</h4>
-                    <p>Действия ниже необратимы</p>
-                    <button class="btn btn-danger" id="clear-all-data-btn">🗑️ Очистить все данные</button>
+                    <h4>Сброс данных</h4>
+                    <p>Сбросить все данные к начальному состоянию</p>
+                    <button class="btn btn-danger" id="clear-all-data-btn">🔄 Сбросить к умолчаниям</button>
                 </div>
             </div>
 
@@ -351,72 +351,73 @@ class SettingsView {
     }
 
     clearAllData() {
-        if (confirm('⚠️ ВНИМАНИЕ! Это действие полностью удалит ВСЕ данные приложения:\n\n• Все контейнеры и их содержимое\n• Все детали в куче\n• Все настройки\n• Весь прогресс\n\nДанное действие НЕОБРАТИМО!\n\nВы уверены, что хотите продолжить?')) {
-            if (confirm('Последнее предупреждение!\n\nВы действительно хотите удалить все данные?\nЭто действие нельзя отменить!')) {
-                try {
-                    // Создаем пустой проект вместо полного удаления localStorage
-                    const emptyProject = {
-                        containers: [],
-                        pileItems: [],
-                        settings: {
-                            storageAdapter: 'local',
-                            imageSource: 'bricklink',
-                            theme: 'light'
-                        },
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        version: '1.0',
-                        clearedAt: new Date().toISOString() // Маркер что данные были очищены пользователем
-                    };
-
-                    // Сохраняем пустой проект
-                    localStorage.setItem('lego-storage-project', JSON.stringify(emptyProject));
-
-                    // Очищаем другие ключи localStorage, связанные с приложением  
-                    const keysToRemove = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && key !== 'lego-storage-project' && (
-                            key.startsWith('lego-storage') || 
-                            key.includes('lego')
-                        )) {
-                            keysToRemove.push(key);
-                        }
-                    }
-
-                    // Удаляем дополнительные ключи (но оставляем основной проект)
-                    keysToRemove.forEach(key => {
-                        localStorage.removeItem(key);
-                    });
-
-                    // Сбрасываем настройки к дефолтным
-                    this.settings = {
+        if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит все данные к начальному состоянию:\n\n• Все контейнеры и их содержимое будут удалены\n• Все детали в куче будут удалены\n• Настройки сбросятся к умолчанию\n• Будут созданы дефолтные контейнеры\n\nВы уверены, что хотите продолжить?')) {
+            try {
+                // Получаем дефолтные данные
+                const mockData = new MockData();
+                
+                // Создаем проект с дефолтными данными
+                const resetProject = {
+                    containers: mockData.getContainers(),
+                    pileItems: mockData.getPileItems(),
+                    settings: {
                         storageAdapter: 'local',
                         imageSource: 'bricklink',
-                        theme: 'light',
-                        autoSave: true,
-                        gridSize: 'medium',
-                        notifications: true
-                    };
-                    
-                    // Сохраняем настройки
-                    localStorage.setItem('lego-storage-settings', JSON.stringify(this.settings));
-                    
-                    // Показываем уведомление об успехе
-                    if (window.app) {
-                        window.app.showNotification('Все данные успешно удалены', 'success');
-                    }
+                        theme: 'light'
+                    },
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    version: '1.0',
+                    resetAt: new Date().toISOString() // Маркер что данные были сброшены пользователем
+                };
 
-                    // Перезагружаем страницу через короткий таймаут для отображения уведомления
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                // Сохраняем проект с дефолтными данными
+                localStorage.setItem('lego-storage-project', JSON.stringify(resetProject));
 
-                } catch (error) {
-                    console.error('Ошибка при очистке данных:', error);
-                    if (window.app) {
-                        window.app.showNotification('Ошибка при очистке данных', 'error');
+                // Очищаем другие ключи localStorage, связанные с приложением  
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key !== 'lego-storage-project' && (
+                        key.startsWith('lego-storage') || 
+                        key.includes('lego')
+                    )) {
+                        keysToRemove.push(key);
                     }
+                }
+
+                // Удаляем дополнительные ключи (но оставляем основной проект)
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+
+                // Сбрасываем настройки к дефолтным
+                this.settings = {
+                    storageAdapter: 'local',
+                    imageSource: 'bricklink',
+                    theme: 'light',
+                    autoSave: true,
+                    gridSize: 'medium',
+                    notifications: true
+                };
+                
+                // Сохраняем настройки
+                localStorage.setItem('lego-storage-settings', JSON.stringify(this.settings));
+                
+                // Показываем уведомление об успехе
+                if (window.app) {
+                    window.app.showNotification('Данные сброшены к начальному состоянию', 'success');
+                }
+
+                // Перезагружаем страницу через короткий таймаут для отображения уведомления
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Ошибка при сбросе данных:', error);
+                if (window.app) {
+                    window.app.showNotification('Ошибка при сбросе данных', 'error');
                 }
             }
         }
