@@ -272,16 +272,25 @@ class HomeView {
         }
     }
 
-    deleteContainer(containerId) {
+    async deleteContainer(containerId) {
         if (confirm('Вы уверены, что хотите удалить этот контейнер? Это действие нельзя отменить.')) {
             const index = this.containers.findIndex(c => c.id === containerId);
             if (index > -1) {
+                // Удаляем контейнер из массива
                 this.containers.splice(index, 1);
-                this.render(this.containers);
                 
+                // Обновляем глобальный массив контейнеров в приложении
                 if (window.app) {
+                    window.app.containers = this.containers;
+                    
+                    // Сохраняем изменения в localStorage
+                    await window.app.saveProject();
+                    
                     window.app.showNotification('Контейнер удален!', 'success');
                 }
+                
+                // Перерендериваем список
+                this.render(this.containers);
             }
         }
     }
