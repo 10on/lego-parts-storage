@@ -27,7 +27,7 @@ class ContainerView {
 
     renderGrid() {
         const grid = document.getElementById('container-grid');
-        if (!grid) return;
+        if (!grid || !this.container) return;
 
         const { rows, cols, cells } = this.container;
         
@@ -320,6 +320,8 @@ class ContainerView {
 
     updateGridSize() {
         // Обновление размеров сетки при изменении размера окна
-        this.renderGrid();
+        if (this.container) {
+            this.renderGrid();
+        }
     }
 }
