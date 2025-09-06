@@ -23,7 +23,7 @@
                 <li><a href="#home" class="nav-link active" data-view="home">🏠 Главная</a></li>
                 <li><a href="#containers" class="nav-link" data-view="containers">📦 Контейнеры</a></li>
                 <li><a href="#pile" class="nav-link" data-view="pile">📚 Куча</a></li>
-                <li><a href="#split" class="nav-link" data-view="split">↔️ Разделение</a></li>
+                <li><a href="#split" class="nav-link" data-view="split">↔️ Перестановка</a></li>
                 <li><a href="#duplicates" class="nav-link" data-view="duplicates">🔍 Дубликаты</a></li>
                 <li><a href="#import" class="nav-link" data-view="import">📥 Импорт</a></li>
                 <li><a href="#settings" class="nav-link" data-view="settings">⚙️ Настройки</a></li>
@@ -89,10 +89,11 @@
             <!-- SplitView -->
             <div id="split-view" class="view">
                 <div class="view-header">
-                    <h2>Разделение контейнеров</h2>
+                    <h2>Перестановка контейнеров</h2>
                     <div class="view-actions">
                         <button class="btn btn-outline" id="select-left-container">Выбрать левый</button>
                         <button class="btn btn-outline" id="select-right-container">Выбрать правый</button>
+                        <button class="btn btn-primary" id="clear-buffer-btn">Очистить буфер</button>
                     </div>
                 </div>
                 <div class="split-content">
@@ -103,6 +104,24 @@
                     <div class="split-panel right-panel">
                         <h3>Правая панель</h3>
                         <div class="container-preview" id="right-container-preview"></div>
+                    </div>
+                </div>
+                
+                <!-- Буфер для перетаскивания ячеек -->
+                <div class="cell-buffer-section">
+                    <h3>Буфер ячеек</h3>
+                    <div class="cell-buffer" id="cell-buffer">
+                        <div class="buffer-empty">
+                            <p>Перетащите ячейки сюда для временного хранения</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Список контейнеров внизу -->
+                <div class="containers-list-section">
+                    <h3>Доступные контейнеры</h3>
+                    <div class="containers-grid" id="containers-grid">
+                        <!-- Контейнеры будут добавлены через JS -->
                     </div>
                 </div>
             </div>

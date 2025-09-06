@@ -209,7 +209,7 @@ class AppShell {
                     </div>
                     <div class="shortcut">
                         <kbd>Ctrl+3</kbd>
-                        <span>Разделение</span>
+                        <span>Перестановка</span>
                     </div>
                     <div class="shortcut">
                         <kbd>Ctrl+4</kbd>

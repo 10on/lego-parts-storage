@@ -1,5 +1,15 @@
 /* Основные стили приложения */
 
+/* Отключаем выделение текста для drag & drop элементов */
+.grid-cell-split,
+.buffer-cell,
+.grid-cell {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 * {
     margin: 0;
     padding: 0;

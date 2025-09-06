@@ -117,6 +117,11 @@ class ContainerView {
             this.handleCellDoubleClick(e, cell);
         });
 
+        // Добавляем drag & drop для ячеек с содержимым
+        if (cellData && cellData.items && cellData.items.length > 0) {
+            this.setupCellDragDrop(cell, cellData, index);
+        }
+
         return cell;
     }
 
@@ -1716,6 +1721,139 @@ class ContainerView {
         // Автосохранение
         if (window.app) {
             window.app.autoSave();
+        }
+    }
+
+    setupCellDragDrop(cell, cellData, index) {
+        // Делаем ячейку перетаскиваемой
+        cell.draggable = true;
+        cell.style.cursor = 'grab';
+
+        cell.addEventListener('dragstart', (e) => {
+            // Подготавливаем данные для перетаскивания
+            const dragData = {
+                type: 'cell',
+                containerId: this.container.id,
+                cellIndex: index,
+                cellData: cellData,
+                parts: cellData.items || [],
+                totalQuantity: cellData.items ? cellData.items.reduce((sum, item) => sum + item.quantity, 0) : 0
+            };
+
+            e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+            e.dataTransfer.effectAllowed = 'move';
+            
+            // Добавляем визуальную обратную связь
+            cell.style.opacity = '0.5';
+        });
+
+        cell.addEventListener('dragend', (e) => {
+            // Восстанавливаем визуальное состояние
+            cell.style.opacity = '1';
+        });
+
+        cell.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+        });
+
+        cell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        cell.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const data = e.dataTransfer.getData('application/json');
+            if (data) {
+                try {
+                    const dropData = JSON.parse(data);
+                    this.handleCellDrop(dropData, index);
+                } catch (error) {
+                    console.error('Ошибка при обработке drop:', error);
+                }
+            }
+        });
+    }
+
+    handleCellDrop(dropData, targetCellIndex) {
+        // Обработка перетаскивания ячеек
+        if (dropData.type === 'cell') {
+            if (dropData.source === 'buffer') {
+                // Перетаскивание из буфера в ячейку
+                this.handleBufferToCellDrop(dropData, targetCellIndex);
+            } else {
+                // Перетаскивание между ячейками
+                this.handleCellToCellDrop(dropData, targetCellIndex);
+            }
+        }
+    }
+
+    handleBufferToCellDrop(dropData, targetCellIndex) {
+        // Добавляем содержимое из буфера в ячейку
+        const targetCell = this.container.cells[targetCellIndex];
+        
+        if (!targetCell) {
+            // Создаем новую ячейку
+            this.container.cells[targetCellIndex] = {
+                type: 'single',
+                items: dropData.parts
+            };
+        } else {
+            // Добавляем к существующей ячейке
+            if (!targetCell.items) {
+                targetCell.items = [];
+            }
+            targetCell.items.push(...dropData.parts);
+        }
+
+        // Перерендериваем сетку
+        this.renderGrid();
+        
+        // Уведомляем SplitView об удалении из буфера
+        if (window.app && window.app.views && window.app.views.split) {
+            window.app.views.split.removeFromBuffer(dropData.bufferIndex);
+        }
+
+        if (window.app) {
+            window.app.showNotification('Содержимое перемещено из буфера', 'success');
+            window.app.autoSave();
+        }
+    }
+
+    handleCellToCellDrop(dropData, targetCellIndex) {
+        // Перемещение между ячейками
+        if (dropData.containerId === this.container.id && dropData.cellIndex === targetCellIndex) {
+            return; // Нельзя перемещать в ту же ячейку
+        }
+
+        const sourceCell = this.container.cells[dropData.cellIndex];
+        const targetCell = this.container.cells[targetCellIndex];
+
+        if (sourceCell && sourceCell.items) {
+            if (!targetCell) {
+                // Создаем новую ячейку
+                this.container.cells[targetCellIndex] = {
+                    type: 'single',
+                    items: [...sourceCell.items]
+                };
+            } else {
+                // Добавляем к существующей ячейке
+                if (!targetCell.items) {
+                    targetCell.items = [];
+                }
+                targetCell.items.push(...sourceCell.items);
+            }
+
+            // Очищаем исходную ячейку
+            this.container.cells[dropData.cellIndex] = null;
+
+            // Перерендериваем сетку
+            this.renderGrid();
+
+            if (window.app) {
+                window.app.showNotification('Содержимое перемещено между ячейками', 'success');
+                window.app.autoSave();
+            }
         }
     }
 }

@@ -43,7 +43,7 @@ class Router {
         
         this.routes.set('split', {
             view: 'split',
-            title: 'Разделение'
+            title: 'Перестановка'
         });
         
         this.routes.set('duplicates', {
