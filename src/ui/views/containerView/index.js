@@ -57,6 +57,15 @@ class ContainerView {
             cell.classList.add('empty');
         }
 
+        // Добавляем обработчики событий прямо при создании ячейки
+        cell.addEventListener('click', (e) => {
+            this.handleCellClick(e, cell);
+        });
+
+        cell.addEventListener('dblclick', (e) => {
+            this.handleCellDoubleClick(e, cell);
+        });
+
         return cell;
     }
 
@@ -72,29 +81,38 @@ class ContainerView {
     }
 
     setupEventListeners() {
-        // Клики по ячейкам
-        document.querySelectorAll('.grid-cell').forEach(cell => {
-            cell.addEventListener('click', (e) => {
-                this.handleCellClick(e, cell);
-            });
-
-            cell.addEventListener('dblclick', (e) => {
-                this.handleCellDoubleClick(e, cell);
-            });
-        });
-
-        // Кнопки управления
+        // Обработчики ячеек теперь добавляются в createCell()
+        // Здесь только кнопки управления
+        
         const editModeBtn = document.getElementById('edit-mode-btn');
         if (editModeBtn) {
-            editModeBtn.addEventListener('click', () => {
+            // Удаляем старые обработчики
+            editModeBtn.replaceWith(editModeBtn.cloneNode(true));
+            const newEditModeBtn = document.getElementById('edit-mode-btn');
+            newEditModeBtn.addEventListener('click', () => {
                 this.toggleEditMode();
             });
         }
 
         const saveBtn = document.getElementById('save-container-btn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
+            // Удаляем старые обработчики
+            saveBtn.replaceWith(saveBtn.cloneNode(true));
+            const newSaveBtn = document.getElementById('save-container-btn');
+            newSaveBtn.addEventListener('click', () => {
                 this.saveContainer();
+            });
+        }
+
+        // Кнопка "Назад"
+        const backBtn = document.getElementById('back-to-home');
+        if (backBtn) {
+            backBtn.replaceWith(backBtn.cloneNode(true));
+            const newBackBtn = document.getElementById('back-to-home');
+            newBackBtn.addEventListener('click', () => {
+                if (window.app) {
+                    window.app.showView('home');
+                }
             });
         }
     }
