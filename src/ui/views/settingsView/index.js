@@ -354,22 +354,37 @@ class SettingsView {
         if (confirm('⚠️ ВНИМАНИЕ! Это действие полностью удалит ВСЕ данные приложения:\n\n• Все контейнеры и их содержимое\n• Все детали в куче\n• Все настройки\n• Весь прогресс\n\nДанное действие НЕОБРАТИМО!\n\nВы уверены, что хотите продолжить?')) {
             if (confirm('Последнее предупреждение!\n\nВы действительно хотите удалить все данные?\nЭто действие нельзя отменить!')) {
                 try {
-                    // Получаем все ключи localStorage, связанные с приложением
+                    // Создаем пустой проект вместо полного удаления localStorage
+                    const emptyProject = {
+                        containers: [],
+                        pileItems: [],
+                        settings: {
+                            storageAdapter: 'local',
+                            imageSource: 'bricklink',
+                            theme: 'light'
+                        },
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        version: '1.0',
+                        clearedAt: new Date().toISOString() // Маркер что данные были очищены пользователем
+                    };
+
+                    // Сохраняем пустой проект
+                    localStorage.setItem('lego-storage-project', JSON.stringify(emptyProject));
+
+                    // Очищаем другие ключи localStorage, связанные с приложением  
                     const keysToRemove = [];
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
-                        if (key && (
+                        if (key && key !== 'lego-storage-project' && (
                             key.startsWith('lego-storage') || 
-                            key.includes('lego') ||
-                            key === 'lego-storage-project' ||
-                            key === 'lego-storage-settings' ||
-                            key === 'lego-storage-containers'
+                            key.includes('lego')
                         )) {
                             keysToRemove.push(key);
                         }
                     }
 
-                    // Удаляем все найденные ключи
+                    // Удаляем дополнительные ключи (но оставляем основной проект)
                     keysToRemove.forEach(key => {
                         localStorage.removeItem(key);
                     });
@@ -383,6 +398,9 @@ class SettingsView {
                         gridSize: 'medium',
                         notifications: true
                     };
+                    
+                    // Сохраняем настройки
+                    localStorage.setItem('lego-storage-settings', JSON.stringify(this.settings));
                     
                     // Показываем уведомление об успехе
                     if (window.app) {

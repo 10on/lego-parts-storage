@@ -47,25 +47,44 @@ class LegoStorageApp {
             // Загружаем данные из LocalStorage
             const project = await this.storage.loadProject();
             
+            // Проверяем, есть ли вообще сохраненный проект
+            const hasExistingProject = localStorage.getItem('lego-storage-project') !== null;
+            
             if (project.containers && project.containers.length > 0) {
                 // Данные уже есть - загружаем их
                 this.containers = project.containers;
                 this.pileItems = project.pileItems || [];
                 console.log('📦 Загружены данные из LocalStorage:', this.containers.length, 'контейнеров');
-            } else {
-                // Новый пользователь - создаем тестовые данные
+            } else if (!hasExistingProject) {
+                // Совсем новый пользователь (никогда не было localStorage) - создаем тестовые данные
                 this.containers = this.mockData.getContainers();
                 this.pileItems = this.mockData.getPileItems();
                 
                 // Сохраняем тестовые данные в LocalStorage
                 await this.saveProject();
                 console.log('🆕 Созданы тестовые данные для нового пользователя:', this.containers.length, 'контейнеров');
+            } else {
+                // Проект существует, но контейнеры пусты (пользователь удалил все) - оставляем пустым
+                this.containers = [];
+                this.pileItems = project.pileItems || [];
+                console.log('📂 Проект существует, но контейнеры отсутствуют (удалены пользователем)');
             }
         } catch (error) {
             console.error('Ошибка загрузки данных:', error);
-            // В случае ошибки создаем тестовые данные
-            this.containers = this.mockData.getContainers();
-            this.pileItems = this.mockData.getPileItems();
+            // В случае ошибки проверяем, есть ли хоть что-то в localStorage
+            const hasAnyData = localStorage.getItem('lego-storage-project') !== null;
+            
+            if (!hasAnyData) {
+                // Если совсем ничего нет - создаем тестовые данные
+                this.containers = this.mockData.getContainers();
+                this.pileItems = this.mockData.getPileItems();
+                console.log('🔧 Ошибка загрузки + нет данных: созданы тестовые данные');
+            } else {
+                // Если данные есть, но не загружаются - оставляем пустыми
+                this.containers = [];
+                this.pileItems = [];
+                console.log('🔧 Ошибка загрузки существующих данных: оставляем пустыми');
+            }
         }
     }
 
