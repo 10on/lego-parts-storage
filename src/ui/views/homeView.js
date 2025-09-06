@@ -102,21 +102,18 @@ class HomeView {
         const { rows, cols, cells } = container;
         const borderColor = this.darkenColor(color, 20);
         
-        // Ограничиваем размер для карточки (максимум 6x8)
-        const maxRows = Math.min(rows, 6);
-        const maxCols = Math.min(cols, 8);
-        
+        // Отображаем полную сетку без ограничений
         let gridHtml = `
             <div class="container-grid-preview" 
-                 style="grid-template-columns: repeat(${maxCols}, 1fr); 
-                        grid-template-rows: repeat(${maxRows}, 1fr);
+                 style="grid-template-columns: repeat(${cols}, 1fr); 
+                        grid-template-rows: repeat(${rows}, 1fr);
                         background-color: ${color};
                         border: 2px solid ${borderColor};">
         `;
         
-        // Создаем ячейки
-        for (let row = 0; row < maxRows; row++) {
-            for (let col = 0; col < maxCols; col++) {
+        // Создаем все ячейки
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
                 const cellIndex = row * cols + col;
                 const cell = cells[cellIndex];
                 const isFilled = cell !== null;
@@ -134,11 +131,6 @@ class HomeView {
         }
         
         gridHtml += '</div>';
-        
-        // Показываем информацию о размере, если сетка обрезана
-        if (rows > maxRows || cols > maxCols) {
-            gridHtml += `<div class="grid-size-info">Показано ${maxRows}×${maxCols} из ${rows}×${cols}</div>`;
-        }
         
         return gridHtml;
     }

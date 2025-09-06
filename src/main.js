@@ -201,11 +201,14 @@ class LegoStorageApp {
                     <label class="form-label">Размер сетки</label>
                     <div class="form-row">
                         <div class="form-group">
-                            <input type="number" class="form-input" id="grid-rows" placeholder="Строки" value="8" min="1" max="20">
+                            <input type="number" class="form-input" id="grid-rows" placeholder="Строки" value="8" min="1" max="50">
                         </div>
                         <div class="form-group">
-                            <input type="number" class="form-input" id="grid-cols" placeholder="Столбцы" value="4" min="1" max="20">
+                            <input type="number" class="form-input" id="grid-cols" placeholder="Столбцы" value="4" min="1" max="50">
                         </div>
+                    </div>
+                    <div class="form-help">
+                        <small>Максимум: 50×50 ячеек. Рекомендуется не более 20×20 для производительности.</small>
                     </div>
                 </div>
                 <div class="form-group">
