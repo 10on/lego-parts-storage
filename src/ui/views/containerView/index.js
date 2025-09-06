@@ -211,8 +211,9 @@ class ContainerView {
             <form class="cell-editor-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Part ID *</label>
-                        <input type="text" class="form-input" id="cell-part-id" value="${cellData?.partId || ''}" placeholder="3001" required>
+                        <label class="form-label">Деталь *</label>
+                        <input type="text" class="form-input autocomplete-input" id="cell-part-id" value="${cellData?.partId || ''}" placeholder="Начните вводить номер или название детали..." required>
+                        <small class="form-help">Выберите деталь из каталога BrickLink</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Количество</label>
@@ -220,26 +221,14 @@ class ContainerView {
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Название детали *</label>
-                    <input type="text" class="form-input" id="cell-name" value="${cellData?.name || ''}" placeholder="Brick 2x4" required>
+                    <label class="form-label">Название детали</label>
+                    <input type="text" class="form-input" id="cell-name" value="${cellData?.name || ''}" placeholder="Заполнится автоматически при выборе детали" readonly>
+                    <small class="form-help">Заполняется автоматически при выборе детали</small>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Цвет</label>
-                    <div class="color-input-group">
-                        <input type="text" class="form-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Red" list="lego-colors">
-                        <datalist id="lego-colors">
-                            <option value="Red">
-                            <option value="Blue">
-                            <option value="Yellow">
-                            <option value="Green">
-                            <option value="White">
-                            <option value="Black">
-                            <option value="Orange">
-                            <option value="Purple">
-                            <option value="Pink">
-                            <option value="Gray">
-                        </datalist>
-                    </div>
+                    <label class="form-label">Цвет *</label>
+                    <input type="text" class="form-input autocomplete-input" id="cell-color" value="${cellData?.color || ''}" placeholder="Начните вводить цвет..." required>
+                    <small class="form-help">Выберите цвет из каталога BrickLink</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">URL изображения</label>
@@ -282,6 +271,77 @@ class ContainerView {
                 this.clearCellData(cell, cellIndex);
             });
         }
+
+        // Инициализация автокомплита для деталей
+        this.setupPartAutocomplete(editor);
+        
+        // Инициализация автокомплита для цветов
+        this.setupColorAutocomplete(editor);
+    }
+
+    setupPartAutocomplete(editor) {
+        const partInput = editor.querySelector('#cell-part-id');
+        const nameInput = editor.querySelector('#cell-name');
+
+        if (!partInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using simple input');
+            return;
+        }
+
+        const partAutocomplete = new AutoComplete(partInput, {
+            minChars: 2,
+            delay: 200,
+            placeholder: 'Введите номер или название детали...',
+            noResultsText: 'Деталь не найдена',
+            showCategories: true,
+            source: async (query) => {
+                return window.brickLinkData.searchParts(query);
+            },
+            onSelect: (value, item) => {
+                // Извлекаем Part ID из значения "partId - название"
+                const partData = window.brickLinkData.getPartById(value);
+                if (partData) {
+                    partInput.value = partData.partId;
+                    nameInput.value = partData.name;
+                } else {
+                    // Если не найдено, пробуем извлечь из item
+                    const partId = item.dataset.value;
+                    const partInfo = window.brickLinkData.getPartById(partId);
+                    if (partInfo) {
+                        partInput.value = partInfo.partId;
+                        nameInput.value = partInfo.name;
+                    }
+                }
+            }
+        });
+
+        // Сохраняем ссылку для последующего удаления
+        this.partAutocomplete = partAutocomplete;
+    }
+
+    setupColorAutocomplete(editor) {
+        const colorInput = editor.querySelector('#cell-color');
+
+        if (!colorInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using simple input');
+            return;
+        }
+
+        const colorAutocomplete = new AutoComplete(colorInput, {
+            minChars: 0, // Показываем популярные цвета сразу
+            delay: 100,
+            placeholder: 'Выберите или введите цвет...',
+            noResultsText: 'Цвет не найден',
+            source: async (query) => {
+                return window.brickLinkData.searchColors(query);
+            },
+            onSelect: (value, item) => {
+                colorInput.value = value;
+            }
+        });
+
+        // Сохраняем ссылку для последующего удаления
+        this.colorAutocomplete = colorAutocomplete;
     }
 
     async saveCellData(cell, cellIndex, editor) {
@@ -385,6 +445,17 @@ class ContainerView {
     }
 
     closeCellEditor() {
+        // Очищаем автокомплиты
+        if (this.partAutocomplete) {
+            this.partAutocomplete.destroy();
+            this.partAutocomplete = null;
+        }
+        
+        if (this.colorAutocomplete) {
+            this.colorAutocomplete.destroy();
+            this.colorAutocomplete = null;
+        }
+
         const modal = document.getElementById('cell-editor-modal');
         if (modal) {
             modal.remove();

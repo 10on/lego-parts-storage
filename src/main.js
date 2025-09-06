@@ -26,6 +26,9 @@ class LegoStorageApp {
         this.importView = new ImportView();
         this.settingsView = new SettingsView();
         
+        // Загрузка данных BrickLink
+        await this.loadBrickLinkData();
+        
         // Загрузка тестовых данных
         await this.loadMockData();
         
@@ -40,6 +43,16 @@ class LegoStorageApp {
         this.showView('home');
         
         console.log('✅ Приложение инициализировано');
+    }
+
+    async loadBrickLinkData() {
+        try {
+            console.log('📦 Загрузка данных BrickLink...');
+            await window.brickLinkData.loadData();
+        } catch (error) {
+            console.error('❌ Ошибка загрузки данных BrickLink:', error);
+            // Приложение может работать и без BrickLink данных
+        }
     }
 
     async loadMockData() {
