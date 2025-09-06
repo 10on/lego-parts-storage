@@ -96,20 +96,20 @@ class LCXIndexedDBAdapter {
         console.log('🔄 Loading data from LCX to IndexedDB...');
         
         try {
-            // Этап 1: Инициализация
-            if (progressCallback) progressCallback(0, 5, 'Инициализация базы данных...');
+            // Шаг 1: Инициализация
+            if (progressCallback) progressCallback(1, 0, 'Инициализация базы данных...');
             await this.init();
             
-            // Этап 2: Парсинг файла
-            if (progressCallback) progressCallback(1, 10, 'Парсинг LCX файла...');
+            // Шаг 2: Парсинг файла
+            if (progressCallback) progressCallback(2, 0, 'Парсинг LCX файла...');
             const transformedData = await this.lcxParser.parse(lcxFile, progressCallback);
             
-            // Этап 3-6: Сохранение данных
-            if (progressCallback) progressCallback(2, 20, 'Начинаем сохранение данных...');
+            // Шаг 3-6: Сохранение данных (шаги 3-6 в saveLCXData)
+            if (progressCallback) progressCallback(3, 0, 'Начинаем сохранение данных...');
             await this.saveLCXData(transformedData, progressCallback);
             
-            // Этап 7: Финализация
-            if (progressCallback) progressCallback(6, 95, 'Обновление метаданных...');
+            // Шаг 7: Финализация
+            if (progressCallback) progressCallback(7, 0, 'Обновление метаданных...');
             await this.setMetadata('lastUpdate', { 
                 timestamp: Date.now(),
                 source: 'lcx',
@@ -117,7 +117,7 @@ class LCXIndexedDBAdapter {
             });
             await this.setMetadata('lcxMetadata', transformedData.metadata);
 
-            if (progressCallback) progressCallback(6, 100, 'Загрузка завершена!');
+            if (progressCallback) progressCallback(7, 100, 'Загрузка завершена!');
             
             const stats = this.lcxParser.getStats(transformedData);
             console.log('✅ LCX data loaded to IndexedDB:', stats);
@@ -144,44 +144,32 @@ class LCXIndexedDBAdapter {
                 this.clearStore('partColors')
             ]);
 
-            // Шаг 4: Сохраняем категории
-            if (progressCallback) progressCallback(4, 100, `Сохранение ${transformedData.categories.length} категорий...`);
-            await this.saveBulkDataWithProgress(
-                'categories', 
-                transformedData.categories,
-                (progress) => progressCallback && progressCallback(4, 100, `Категории: ${Math.round(progress * 100)}%`)
-            );
+            // Шаг 3: Сохраняем категории
+            if (progressCallback) progressCallback(3, 0, `Сохранение ${transformedData.categories.length} категорий...`);
+            await this.saveBulkDataWithProgress('categories', transformedData.categories, null); // БЕЗ progressCallback
+            if (progressCallback) progressCallback(3, 100, `Категории сохранены!`);
             console.log(`📦 Saved ${transformedData.categories.length} categories`);
 
-            // Шаг 5: Сохраняем цвета
-            if (progressCallback) progressCallback(5, 100, `Сохранение ${transformedData.colors.length} цветов...`);
-            await this.saveBulkDataWithProgress(
-                'colors', 
-                transformedData.colors,
-                (progress) => progressCallback && progressCallback(5, 100, `Цвета: ${Math.round(progress * 100)}%`)
-            );
+            // Шаг 4: Сохраняем цвета
+            if (progressCallback) progressCallback(4, 0, `Сохранение ${transformedData.colors.length} цветов...`);
+            await this.saveBulkDataWithProgress('colors', transformedData.colors, null); // БЕЗ progressCallback
+            if (progressCallback) progressCallback(4, 100, `Цвета сохранены!`);
             console.log(`🎨 Saved ${transformedData.colors.length} colors`);
 
-            // Шаг 6: Сохраняем детали (самый большой массив)
-            if (progressCallback) progressCallback(6, 20, `Сохранение ${transformedData.parts.length} деталей...`);
-            await this.saveBulkDataWithProgress(
-                'parts', 
-                transformedData.parts,
-                (progress) => progressCallback && progressCallback(6, 20 + progress * 80, `Детали: ${Math.round(progress * 100)}%`)
-            );
+            // Шаг 5: Сохраняем детали (самый большой массив)
+            if (progressCallback) progressCallback(5, 0, `Сохранение ${transformedData.parts.length} деталей...`);
+            await this.saveBulkDataWithProgress('parts', transformedData.parts, null); // БЕЗ progressCallback
+            if (progressCallback) progressCallback(5, 100, `Детали сохранены!`);
             console.log(`🧱 Saved ${transformedData.parts.length} parts`);
 
             // Шаг 6: Сохраняем связи деталь-цвет (если есть)
             if (transformedData.partColors && transformedData.partColors.length > 0) {
-                if (progressCallback) progressCallback(6, 90, `Сохранение ${transformedData.partColors.length} связей...`);
-                await this.saveBulkDataWithProgress(
-                    'partColors', 
-                    transformedData.partColors,
-                    (progress) => progressCallback && progressCallback(6, 90 + progress * 10, `Связи: ${Math.round(progress * 100)}%`)
-                );
+                if (progressCallback) progressCallback(6, 0, `Сохранение ${transformedData.partColors.length} связей...`);
+                await this.saveBulkDataWithProgress('partColors', transformedData.partColors, null); // БЕЗ progressCallback
+                if (progressCallback) progressCallback(6, 100, `Связи сохранены!`);
                 console.log(`🔗 Saved ${transformedData.partColors.length} part-color relations`);
             } else {
-                if (progressCallback) progressCallback(6, 95, 'Связи деталь-цвет отсутствуют');
+                if (progressCallback) progressCallback(6, 0, 'Связи деталь-цвет отсутствуют');
             }
 
             console.log('✅ All LCX data saved to IndexedDB');
