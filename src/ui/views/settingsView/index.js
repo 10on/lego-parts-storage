@@ -27,7 +27,7 @@ class SettingsView {
                 <p>Выберите способ хранения данных приложения</p>
                 <div class="form-group">
                     <label class="form-label">Адаптер хранения</label>
-                    <select class="form-select" id="storage-adapter">
+                    <select class="form-select" id="storage-adapter" disabled>
                         <option value="local">LocalStorage (быстро, ограничено)</option>
                         <option value="idb">IndexedDB (больше места)</option>
                         <option value="firebase">Firebase (синхронизация)</option>
@@ -37,6 +37,7 @@ class SettingsView {
                     <p><strong>LocalStorage:</strong> Данные хранятся локально в браузере. Быстро, но ограничено по объему.</p>
                     <p><strong>IndexedDB:</strong> Больше места для хранения, поддерживает большие объемы данных.</p>
                     <p><strong>Firebase:</strong> Облачное хранение с синхронизацией между устройствами.</p>
+                    <p class="setting-disabled-note">⚠️ Переключение адаптеров хранения будет доступно в следующих версиях</p>
                 </div>
             </div>
 
@@ -45,7 +46,7 @@ class SettingsView {
                 <p>Выберите источник изображений деталей LEGO</p>
                 <div class="form-group">
                     <label class="form-label">Источник изображений</label>
-                    <select class="form-select" id="image-source">
+                    <select class="form-select" id="image-source" disabled>
                         <option value="bricklink">BrickLink</option>
                         <option value="rebrickable">Rebrickable</option>
                         <option value="local">Локальные файлы</option>
@@ -55,6 +56,7 @@ class SettingsView {
                     <p><strong>BrickLink:</strong> Официальные изображения с BrickLink.com</p>
                     <p><strong>Rebrickable:</strong> Изображения с Rebrickable.com</p>
                     <p><strong>Локальные:</strong> Использовать локально сохраненные изображения</p>
+                    <p class="setting-disabled-note">⚠️ Настройка источников изображений будет доступна в следующих версиях</p>
                 </div>
             </div>
 
@@ -63,7 +65,7 @@ class SettingsView {
                 <p>Настройки интерфейса и темы</p>
                 <div class="form-group">
                     <label class="form-label">Тема</label>
-                    <select class="form-select" id="theme-select">
+                    <select class="form-select" id="theme-select" disabled>
                         <option value="light">Светлая</option>
                         <option value="dark">Тёмная</option>
                         <option value="auto">Автоматически</option>
@@ -71,11 +73,14 @@ class SettingsView {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Размер сетки</label>
-                    <select class="form-select" id="grid-size">
+                    <select class="form-select" id="grid-size" disabled>
                         <option value="small">Маленький (40px)</option>
                         <option value="medium">Средний (60px)</option>
                         <option value="large">Большой (80px)</option>
                     </select>
+                </div>
+                <div class="setting-description">
+                    <p class="setting-disabled-note">⚠️ Настройки внешнего вида будут доступны в следующих версиях</p>
                 </div>
             </div>
 
@@ -84,21 +89,24 @@ class SettingsView {
                 <p>Настройки работы приложения</p>
                 <div class="form-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="auto-save" checked>
+                        <input type="checkbox" id="auto-save" checked disabled>
                         Автоматическое сохранение
                     </label>
                 </div>
                 <div class="form-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="notifications" checked>
+                        <input type="checkbox" id="notifications" checked disabled>
                         Показывать уведомления
                     </label>
                 </div>
                 <div class="form-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="confirm-delete">
+                        <input type="checkbox" id="confirm-delete" disabled>
                         Подтверждать удаление
                     </label>
+                </div>
+                <div class="setting-description">
+                    <p class="setting-disabled-note">⚠️ Настройки поведения будут доступны в следующих версиях</p>
                 </div>
             </div>
 
@@ -106,9 +114,12 @@ class SettingsView {
                 <h3>Данные</h3>
                 <p>Управление данными приложения</p>
                 <div class="settings-actions">
-                    <button class="btn btn-outline" id="export-settings-btn">Экспорт настроек</button>
-                    <button class="btn btn-outline" id="import-settings-btn">Импорт настроек</button>
-                    <button class="btn btn-outline" id="reset-settings-btn">Сбросить настройки</button>
+                    <button class="btn btn-outline" id="export-settings-btn" disabled>Экспорт настроек</button>
+                    <button class="btn btn-outline" id="import-settings-btn" disabled>Импорт настроек</button>
+                    <button class="btn btn-outline" id="reset-settings-btn" disabled>Сбросить настройки</button>
+                </div>
+                <div class="setting-description">
+                    <p class="setting-disabled-note">⚠️ Экспорт/импорт настроек будет доступен в следующих версиях</p>
                 </div>
                 <div class="settings-actions danger-zone">
                     <h4>Сброс данных</h4>
@@ -129,50 +140,71 @@ class SettingsView {
     }
 
     setupEventListeners() {
-        // Изменение настроек
+        // Изменение настроек (только для активных элементов)
         document.getElementById('storage-adapter')?.addEventListener('change', (e) => {
-            this.updateSetting('storageAdapter', e.target.value);
+            if (!e.target.disabled) {
+                this.updateSetting('storageAdapter', e.target.value);
+            }
         });
 
         document.getElementById('image-source')?.addEventListener('change', (e) => {
-            this.updateSetting('imageSource', e.target.value);
+            if (!e.target.disabled) {
+                this.updateSetting('imageSource', e.target.value);
+            }
         });
 
         document.getElementById('theme-select')?.addEventListener('change', (e) => {
-            this.updateSetting('theme', e.target.value);
-            this.applyTheme(e.target.value);
+            if (!e.target.disabled) {
+                this.updateSetting('theme', e.target.value);
+                this.applyTheme(e.target.value);
+            }
         });
 
         document.getElementById('grid-size')?.addEventListener('change', (e) => {
-            this.updateSetting('gridSize', e.target.value);
-            this.applyGridSize(e.target.value);
+            if (!e.target.disabled) {
+                this.updateSetting('gridSize', e.target.value);
+                this.applyGridSize(e.target.value);
+            }
         });
 
         document.getElementById('auto-save')?.addEventListener('change', (e) => {
-            this.updateSetting('autoSave', e.target.checked);
+            if (!e.target.disabled) {
+                this.updateSetting('autoSave', e.target.checked);
+            }
         });
 
         document.getElementById('notifications')?.addEventListener('change', (e) => {
-            this.updateSetting('notifications', e.target.checked);
+            if (!e.target.disabled) {
+                this.updateSetting('notifications', e.target.checked);
+            }
         });
 
         document.getElementById('confirm-delete')?.addEventListener('change', (e) => {
-            this.updateSetting('confirmDelete', e.target.checked);
+            if (!e.target.disabled) {
+                this.updateSetting('confirmDelete', e.target.checked);
+            }
         });
 
-        // Кнопки действий
-        document.getElementById('export-settings-btn')?.addEventListener('click', () => {
-            this.exportSettings();
+        // Кнопки действий (только для активных кнопок)
+        document.getElementById('export-settings-btn')?.addEventListener('click', (e) => {
+            if (!e.target.disabled) {
+                this.exportSettings();
+            }
         });
 
-        document.getElementById('import-settings-btn')?.addEventListener('click', () => {
-            this.importSettings();
+        document.getElementById('import-settings-btn')?.addEventListener('click', (e) => {
+            if (!e.target.disabled) {
+                this.importSettings();
+            }
         });
 
-        document.getElementById('reset-settings-btn')?.addEventListener('click', () => {
-            this.resetSettings();
+        document.getElementById('reset-settings-btn')?.addEventListener('click', (e) => {
+            if (!e.target.disabled) {
+                this.resetSettings();
+            }
         });
 
+        // Кнопка очистки данных всегда активна
         document.getElementById('clear-all-data-btn')?.addEventListener('click', () => {
             this.clearAllData();
         });
