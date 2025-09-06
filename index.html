@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEGO Storage Mapper</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/grid.css">
+    <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Сайдбар навигации -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h1>LEGO Storage</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link active" data-view="home">🏠 Главная</a></li>
+                <li><a href="#containers" class="nav-link" data-view="containers">📦 Контейнеры</a></li>
+                <li><a href="#pile" class="nav-link" data-view="pile">📚 Куча</a></li>
+                <li><a href="#split" class="nav-link" data-view="split">↔️ Разделение</a></li>
+                <li><a href="#duplicates" class="nav-link" data-view="duplicates">🔍 Дубликаты</a></li>
+                <li><a href="#import" class="nav-link" data-view="import">📥 Импорт</a></li>
+                <li><a href="#settings" class="nav-link" data-view="settings">⚙️ Настройки</a></li>
+            </ul>
+        </nav>
+
+        <!-- Основная рабочая область -->
+        <main id="main-content" class="main-content">
+            <!-- HomeView -->
+            <div id="home-view" class="view active">
+                <div class="view-header">
+                    <h2>Мои контейнеры</h2>
+                    <button class="btn btn-primary" id="add-container-btn">+ Добавить контейнер</button>
+                </div>
+                <div class="containers-grid" id="containers-grid">
+                    <!-- Контейнеры будут добавлены через JS -->
+                </div>
+            </div>
+
+            <!-- ContainerView -->
+            <div id="container-view" class="view">
+                <div class="view-header">
+                    <button class="btn btn-secondary" id="back-to-home">← Назад</button>
+                    <h2 id="container-title">Кассетница</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-outline" id="edit-mode-btn">Режим редактирования</button>
+                        <button class="btn btn-primary" id="save-container-btn">Сохранить</button>
+                    </div>
+                </div>
+                <div class="container-grid" id="container-grid">
+                    <!-- Сетка контейнера будет добавлена через JS -->
+                </div>
+            </div>
+
+            <!-- PileView -->
+            <div id="pile-view" class="view">
+                <div class="view-header">
+                    <h2>Куча деталей</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-outline" id="add-pile-item-btn">+ Добавить деталь</button>
+                        <button class="btn btn-primary" id="distribute-pile-btn">Распределить</button>
+                    </div>
+                </div>
+                <div class="pile-content" id="pile-content">
+                    <!-- Список деталей в куче -->
+                </div>
+            </div>
+
+            <!-- SplitView -->
+            <div id="split-view" class="view">
+                <div class="view-header">
+                    <h2>Разделение контейнеров</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-outline" id="select-left-container">Выбрать левый</button>
+                        <button class="btn btn-outline" id="select-right-container">Выбрать правый</button>
+                    </div>
+                </div>
+                <div class="split-content">
+                    <div class="split-panel left-panel">
+                        <h3>Левая панель</h3>
+                        <div class="container-preview" id="left-container-preview"></div>
+                    </div>
+                    <div class="split-panel right-panel">
+                        <h3>Правая панель</h3>
+                        <div class="container-preview" id="right-container-preview"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DuplicatesView -->
+            <div id="duplicates-view" class="view">
+                <div class="view-header">
+                    <h2>Поиск дубликатов</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-primary" id="scan-duplicates-btn">Сканировать</button>
+                    </div>
+                </div>
+                <div class="duplicates-content" id="duplicates-content">
+                    <!-- Результаты поиска дубликатов -->
+                </div>
+            </div>
+
+            <!-- ImportView -->
+            <div id="import-view" class="view">
+                <div class="view-header">
+                    <h2>Импорт данных</h2>
+                </div>
+                <div class="import-content">
+                    <div class="import-section">
+                        <h3>Импорт из файла</h3>
+                        <input type="file" id="import-file" accept=".json,.csv" class="file-input">
+                        <button class="btn btn-primary" id="import-btn">Импортировать</button>
+                    </div>
+                    <div class="import-section">
+                        <h3>Экспорт данных</h3>
+                        <button class="btn btn-outline" id="export-json-btn">Экспорт JSON</button>
+                        <button class="btn btn-outline" id="export-csv-btn">Экспорт CSV</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SettingsView -->
+            <div id="settings-view" class="view">
+                <div class="view-header">
+                    <h2>Настройки</h2>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h3>Хранение данных</h3>
+                        <select id="storage-adapter" class="form-select">
+                            <option value="local">LocalStorage</option>
+                            <option value="idb">IndexedDB</option>
+                            <option value="firebase">Firebase</option>
+                        </select>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Источник изображений</h3>
+                        <select id="image-source" class="form-select">
+                            <option value="bricklink">BrickLink</option>
+                            <option value="rebrickable">Rebrickable</option>
+                        </select>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Тема</h3>
+                        <select id="theme-select" class="form-select">
+                            <option value="light">Светлая</option>
+                            <option value="dark">Тёмная</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Заголовок</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Содержимое модального окна -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение скриптов -->
+    <script src="src/main.js"></script>
+    <script src="src/router.js"></script>
+    <script src="src/events.js"></script>
+    <script src="src/data/project.js"></script>
+    <script src="src/data/containers.js"></script>
+    <script src="src/domain/model.js"></script>
+    <script src="src/ui/appShell/shell.js"></script>
+    <script src="src/ui/appShell/sidebar.js"></script>
+    <script src="src/ui/views/homeView.js"></script>
+    <script src="src/ui/views/containerView/index.js"></script>
+    <script src="src/ui/views/pileView/index.js"></script>
+    <script src="src/ui/views/splitView/index.js"></script>
+    <script src="src/ui/views/duplicatesView/index.js"></script>
+    <script src="src/ui/views/importView/index.js"></script>
+    <script src="src/ui/views/settingsView/index.js"></script>
+</body>
+</html>

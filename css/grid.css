@@ -1,0 +1,318 @@
+/* Стили для сетки контейнеров */
+
+.container-grid {
+    display: grid;
+    gap: var(--grid-gap);
+    background-color: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: auto;
+    max-height: calc(100vh - 200px);
+}
+
+/* Ячейка сетки */
+.grid-cell {
+    background-color: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    min-height: var(--grid-cell-size);
+    min-width: var(--grid-cell-size);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.grid-cell:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.grid-cell.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.grid-cell.editing {
+    border-color: var(--warning-color);
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Объединённые ячейки */
+.grid-cell.merged {
+    background-color: var(--bg-secondary);
+    border-style: dashed;
+}
+
+.grid-cell.merged::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        var(--border-color) 10px,
+        var(--border-color) 20px
+    );
+    opacity: 0.3;
+}
+
+/* Содержимое ячейки */
+.cell-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0.25rem;
+    text-align: center;
+}
+
+.cell-image {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+    border-radius: 2px;
+}
+
+.cell-part-id {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.125rem;
+    line-height: 1;
+}
+
+.cell-quantity {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.cell-color {
+    font-size: 0.625rem;
+    color: var(--text-secondary);
+    line-height: 1;
+    margin-top: 0.125rem;
+}
+
+/* Пустые ячейки */
+.grid-cell.empty {
+    background-color: var(--bg-primary);
+    border-style: dashed;
+    border-color: var(--text-muted);
+}
+
+.grid-cell.empty:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.grid-cell.empty::after {
+    content: '+';
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    font-weight: 300;
+}
+
+/* Разделители */
+.grid-separator {
+    background-color: var(--primary-color);
+    border-radius: 1px;
+}
+
+.grid-separator.horizontal {
+    height: 2px;
+    width: 100%;
+    margin: 0.5rem 0;
+}
+
+.grid-separator.vertical {
+    width: 2px;
+    height: 100%;
+    margin: 0 0.5rem;
+}
+
+/* Компартменты */
+.compartment {
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.compartment-header {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+/* Редактор ячейки */
+.cell-editor {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    z-index: 1000;
+    padding: 1rem;
+    margin-top: 0.25rem;
+}
+
+.cell-editor h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.cell-editor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: border-color 0.15s ease;
+}
+
+.form-input:focus {
+    outline: 0;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Цветовые индикаторы */
+.color-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.color-indicator.multicolor {
+    background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff, #ffff00);
+}
+
+/* Drag & Drop */
+.grid-cell.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.grid-cell.drop-target {
+    border-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.grid-cell.drop-target::after {
+    content: 'Отпустите здесь';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    color: var(--success-color);
+    font-weight: 600;
+    background-color: var(--bg-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Адаптивность сетки */
+@media (max-width: 768px) {
+    .container-grid {
+        padding: 0.5rem;
+        max-height: calc(100vh - 150px);
+    }
+    
+    .grid-cell {
+        min-height: 50px;
+        min-width: 50px;
+    }
+    
+    .cell-image {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .cell-part-id {
+        font-size: 0.625rem;
+    }
+    
+    .cell-quantity {
+        font-size: 0.75rem;
+    }
+    
+    .cell-color {
+        font-size: 0.5rem;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+.grid-cell {
+    animation: fadeIn 0.3s ease;
+}
+
+.cell-editor {
+    animation: slideIn 0.2s ease;
+}
