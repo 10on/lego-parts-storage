@@ -287,6 +287,14 @@ class ContainerView {
         // Инициализация обновления изображения
         const updateImage = this.setupImageUpdate(editor);
         
+        // Обновляем изображение для существующих данных ячейки
+        if (cellData && cellData.partId && cellData.color) {
+            // Небольшая задержка чтобы DOM успел обновиться
+            setTimeout(() => {
+                updateImage();
+            }, 100);
+        }
+        
         // Инициализация автокомплита для деталей
         this.setupPartAutocomplete(editor, updateImage);
         
@@ -631,8 +639,14 @@ class ContainerView {
 
         // НЕ обновляем изображение при вводе - только при выборе из списка
 
-        // Показываем заглушку при загрузке формы
-        this.showImagePlaceholder(imageElement, placeholderElement);
+        // Показываем заглушку при загрузке формы или обновляем изображение если есть данные
+        if (partInput.value.trim() && colorInput.value.trim()) {
+            // Если есть данные в полях, обновляем изображение
+            updateImage();
+        } else {
+            // Иначе показываем заглушку
+            this.showImagePlaceholder(imageElement, placeholderElement);
+        }
         
         // Возвращаем функцию updateImage для использования в других методах
         return updateImage;
