@@ -399,6 +399,10 @@ body {
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.15s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
 }
 
 .container-card:hover {
@@ -412,9 +416,50 @@ body {
     color: var(--text-primary);
 }
 
-.container-card p {
+.container-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.container-card-header h3 {
+    margin: 0;
+    flex: 1;
+}
+
+.container-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.container-card:hover .container-actions {
+    opacity: 1;
+}
+
+.container-actions .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    min-width: auto;
+}
+
+.container-visualization {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 180px;
+    margin-bottom: 1rem;
+}
+
+.container-description {
     color: var(--text-secondary);
     margin-bottom: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 .container-stats {
@@ -422,6 +467,37 @@ body {
     justify-content: space-between;
     font-size: 0.875rem;
     color: var(--text-muted);
+    margin-top: auto;
+}
+
+.container-progress {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    min-width: 30px;
+    text-align: right;
 }
 
 /* Модальные окна */
@@ -588,12 +664,7 @@ body {
 
 /* Удален .grid-size-info - больше не используется */
 
-/* Container Cards */
-.container-card {
-    position: relative;
-    overflow: hidden;
-}
-
+/* Container Cards - дополнительные стили */
 .container-card:hover .container-grid-preview {
     transform: scale(1.05);
     transition: transform 0.2s ease;
