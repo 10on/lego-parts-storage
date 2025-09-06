@@ -6,7 +6,7 @@ class LegoPart {
         this.name = data.name;
         this.color = data.color;
         this.colorId = data.colorId;
-        this.quantity = data.quantity || 1;
+        this.quantity = data.quantity !== undefined ? data.quantity : null;
         this.image = data.image;
         this.lastUpdated = data.lastUpdated || new Date().toISOString();
     }
@@ -16,18 +16,26 @@ class LegoPart {
     }
 
     updateQuantity(newQuantity) {
-        if (newQuantity >= 0) {
+        if (newQuantity === null || newQuantity === undefined || newQuantity >= 0) {
             this.quantity = newQuantity;
             this.lastUpdated = new Date().toISOString();
         }
     }
 
     addQuantity(amount) {
-        this.updateQuantity(this.quantity + amount);
+        if (this.quantity === null || this.quantity === undefined) {
+            this.updateQuantity(amount);
+        } else {
+            this.updateQuantity(this.quantity + amount);
+        }
     }
 
     removeQuantity(amount) {
-        this.updateQuantity(Math.max(0, this.quantity - amount));
+        if (this.quantity === null || this.quantity === undefined) {
+            this.updateQuantity(0);
+        } else {
+            this.updateQuantity(Math.max(0, this.quantity - amount));
+        }
     }
 
     clone() {
@@ -143,7 +151,11 @@ class Container {
         
         if (itemIndex >= 0) {
             const item = this.cells[index].items[itemIndex];
-            item.quantity = Math.max(0, item.quantity - quantity);
+            if (item.quantity === null || item.quantity === undefined) {
+                item.quantity = 0;
+            } else {
+                item.quantity = Math.max(0, item.quantity - quantity);
+            }
             
             if (item.quantity <= 0) {
                 this.cells[index].items.splice(itemIndex, 1);
@@ -191,7 +203,12 @@ class Container {
 
     getCellTotalQuantity(row, col) {
         const parts = this.getCellParts(row, col);
-        return parts.reduce((total, part) => total + (part.quantity || 1), 0);
+        return parts.reduce((total, part) => {
+            if (part.quantity === null || part.quantity === undefined) {
+                return total; // Не учитываем детали без количества
+            }
+            return total + part.quantity;
+        }, 0);
     }
 
     clearCell(row, col) {

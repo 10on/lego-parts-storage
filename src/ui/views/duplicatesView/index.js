@@ -173,7 +173,12 @@ class DuplicatesView {
 
     calculateTotalDuplicates() {
         return this.duplicates.reduce((total, group) => {
-            return total + group.items.reduce((sum, item) => sum + item.quantity, 0);
+            return total + group.items.reduce((sum, item) => {
+                if (item.quantity === null || item.quantity === undefined) {
+                    return sum; // Не учитываем детали без количества
+                }
+                return sum + item.quantity;
+            }, 0);
         }, 0);
     }
 

@@ -171,7 +171,7 @@ class ContainerView {
                 <div class="cell-content">
                 ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
                 <div class="cell-part-id">${partData.partId}</div>
-                <div class="cell-quantity">${partData.quantity || 1}</div>
+                <div class="cell-quantity">${partData.quantity !== null && partData.quantity !== undefined ? partData.quantity : '?'}</div>
                 <div class="cell-color">${partData.color}</div>
                 </div>
             `;
@@ -431,7 +431,7 @@ class ContainerView {
                                                 <div class="part-color">${item.color}</div>
                                             </div>
                                             <div class="part-quantity">
-                                                <input type="number" value="${item.quantity || 1}" min="1" max="999" class="quantity-input" data-index="${index}">
+                                                <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
                                             </div>
                                             <div class="part-actions">
                                                 <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
@@ -462,8 +462,8 @@ class ContainerView {
                             <small class="form-help">Выберите цвет из каталога BrickLink</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Количество</label>
-                            <input type="number" class="form-input" id="cell-quantity" value="${displayData?.quantity || 1}" min="1" max="999">
+                            <label class="form-label">Количество (опционально)</label>
+                            <input type="number" class="form-input" id="cell-quantity" value="${displayData?.quantity || ''}" placeholder="Оставить пустым если не важно" max="999">
                         </div>
                     </div>
                     <div class="form-actions">
@@ -641,7 +641,8 @@ class ContainerView {
         editor.querySelectorAll('.quantity-input').forEach(input => {
             input.addEventListener('change', (e) => {
                 const index = parseInt(e.target.dataset.index);
-                const newQuantity = parseInt(e.target.value) || 1;
+                const quantityValue = e.target.value;
+                const newQuantity = quantityValue ? parseInt(quantityValue) : null;
                 this.updatePartQuantity(cell, cellIndex, index, newQuantity);
             });
         });
@@ -670,13 +671,13 @@ class ContainerView {
         // Если это объединенная ячейка
         if (cellData.type === 'merged' && cellData.items) {
             if (cellData.items[partIndex]) {
-                cellData.items[partIndex].quantity = Math.max(1, newQuantity);
+                cellData.items[partIndex].quantity = newQuantity;
                 cellData.updatedAt = new Date().toISOString();
             }
         } else if (cellData.items) {
             // Если это обычная ячейка с множественными деталями
             if (cellData.items[partIndex]) {
-                cellData.items[partIndex].quantity = Math.max(1, newQuantity);
+                cellData.items[partIndex].quantity = newQuantity;
                 this.container.updatedAt = new Date().toISOString();
             }
         }
@@ -729,7 +730,8 @@ class ContainerView {
 
     async saveCellData(cell, cellIndex, editor) {
         const partValue = editor.querySelector('#cell-part').value.trim();
-        const quantity = parseInt(editor.querySelector('#cell-quantity').value) || 1;
+        const quantityValue = editor.querySelector('#cell-quantity').value;
+        const quantity = quantityValue ? parseInt(quantityValue) : null;
         const color = editor.querySelector('#cell-color').value.trim();
         const editingPartIndex = editor.dataset.editingPartIndex;
 
@@ -744,7 +746,7 @@ class ContainerView {
             return;
         }
 
-        if (quantity < 1 || quantity > 999) {
+        if (quantityValue && (quantity < 1 || quantity > 999)) {
             this.showValidationError(editor.querySelector('#cell-quantity'), 'Количество должно быть от 1 до 999');
             return;
         }
@@ -933,7 +935,7 @@ class ContainerView {
                             <div class="part-color">${item.color}</div>
                         </div>
                         <div class="part-quantity">
-                            <input type="number" value="${item.quantity || 1}" min="1" max="999" class="quantity-input" data-index="${index}">
+                            <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
                         </div>
                         <div class="part-actions">
                             <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>

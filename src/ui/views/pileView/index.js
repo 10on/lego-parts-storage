@@ -46,7 +46,7 @@ class PileView {
                 <div class="pile-item-actions">
                     <div class="pile-item-quantity-controls">
                         <button class="quantity-btn" data-action="decrease">-</button>
-                        <input type="number" class="quantity-input" value="${item.quantity}" min="0">
+                        <input type="number" class="quantity-input" value="${item.quantity || ''}" min="0">
                         <button class="quantity-btn" data-action="increase">+</button>
                     </div>
                     <button class="btn btn-sm btn-outline" data-action="edit" title="Редактировать">
@@ -162,17 +162,19 @@ class PileView {
 
     changeQuantity(btn, delta) {
         const input = btn.parentElement.querySelector('.quantity-input');
-        const newValue = Math.max(0, parseInt(input.value) + delta);
-        input.value = newValue;
+        const currentValue = input.value ? parseInt(input.value) : 0;
+        const newValue = Math.max(0, currentValue + delta);
+        input.value = newValue || '';
         this.updateQuantity(input);
     }
 
     async updateQuantity(input) {
         const itemId = input.closest('.pile-item').dataset.itemId;
-        const newQuantity = parseInt(input.value);
+        const quantityValue = input.value;
+        const newQuantity = quantityValue ? parseInt(quantityValue) : null;
         
-        if (isNaN(newQuantity) || newQuantity < 0) {
-            input.value = 0;
+        if (quantityValue && (isNaN(newQuantity) || newQuantity < 0)) {
+            input.value = '';
             return;
         }
 
@@ -363,8 +365,8 @@ class PileView {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Количество</label>
-                        <input type="number" class="form-input" id="new-quantity" value="1" min="1">
+                        <label class="form-label">Количество (опционально)</label>
+                        <input type="number" class="form-input" id="new-quantity" placeholder="Оставить пустым если не важно">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Цвет</label>
@@ -394,7 +396,8 @@ class PileView {
     async addNewItem() {
         const partId = document.getElementById('new-part-id').value;
         const name = document.getElementById('new-name').value;
-        const quantity = parseInt(document.getElementById('new-quantity').value);
+        const quantityValue = document.getElementById('new-quantity').value;
+        const quantity = quantityValue ? parseInt(quantityValue) : null;
         const color = document.getElementById('new-color').value;
         const image = document.getElementById('new-image').value;
 
