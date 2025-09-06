@@ -13,7 +13,6 @@ class LegoStorageApp {
         console.log('🚀 Инициализация LEGO Storage Mapper');
         
         // Инициализация компонентов
-        this.router = new Router();
         this.sidebar = new Sidebar();
         this.homeView = new HomeView();
         this.containerView = new ContainerView();
@@ -28,6 +27,10 @@ class LegoStorageApp {
         
         // Инициализация событий
         this.setupEventListeners();
+        
+        // Инициализация роутера после готовности приложения
+        this.router = new Router();
+        this.router.init();
         
         // Показ начального экрана
         this.showView('home');
@@ -93,6 +96,10 @@ class LegoStorageApp {
             // Обновить содержимое вида
             this.updateViewContent(viewName);
         }
+    }
+
+    getCurrentView() {
+        return this.currentView;
     }
 
     updateViewContent(viewName) {

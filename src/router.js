@@ -3,7 +3,6 @@ class Router {
     constructor() {
         this.routes = new Map();
         this.currentRoute = null;
-        this.init();
     }
 
     init() {
@@ -20,8 +19,10 @@ class Router {
         // Инициализация маршрутов
         this.setupRoutes();
         
-        // Обработка начального маршрута
-        this.handleRouteChange();
+        // Обработка начального маршрута с задержкой
+        setTimeout(() => {
+            this.handleRouteChange();
+        }, 100);
     }
 
     setupRoutes() {
@@ -81,7 +82,7 @@ class Router {
             document.title = `${title} - LEGO Storage Mapper`;
             
             // Уведомляем приложение о смене маршрута
-            if (window.app) {
+            if (window.app && typeof window.app.showView === 'function') {
                 window.app.showView(view);
             }
         }
