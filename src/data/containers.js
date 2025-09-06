@@ -192,6 +192,62 @@ class ContainerModel {
         this.saveToStorage();
     }
 
+    // Клонирование контейнера
+    clone(containerId, includeContent = false) {
+        const originalContainer = this.read(containerId);
+        if (!originalContainer) {
+            return null;
+        }
+
+        const clonedContainer = {
+            id: this.generateId(),
+            name: `${originalContainer.name} (копия)`,
+            type: originalContainer.type,
+            rows: originalContainer.rows,
+            cols: originalContainer.cols,
+            color: originalContainer.color,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (includeContent && originalContainer.cells) {
+            // Глубокое копирование ячеек с содержимым
+            clonedContainer.cells = originalContainer.cells.map(cell => {
+                if (!cell) return null;
+                
+                // Копируем структуру ячейки
+                const clonedCell = {
+                    type: cell.type,
+                    partId: cell.partId,
+                    name: cell.name,
+                    color: cell.color,
+                    colorId: cell.colorId,
+                    quantity: cell.quantity,
+                    image: cell.image,
+                    lastUpdated: cell.lastUpdated
+                };
+
+                // Если это объединенная ячейка, копируем дополнительные свойства
+                if (cell.type === 'merged') {
+                    clonedCell.cellCount = cell.cellCount;
+                    clonedCell.items = cell.items ? cell.items.map(item => ({
+                        ...item,
+                        id: Date.now().toString(36) + Math.random().toString(36).substr(2) // Новый ID для каждого элемента
+                    })) : [];
+                }
+
+                return clonedCell;
+            });
+        } else {
+            // Создаем пустую сетку того же размера
+            clonedContainer.cells = Array(originalContainer.rows * originalContainer.cols).fill(null);
+        }
+
+        this.containers.push(clonedContainer);
+        this.saveToStorage();
+        return clonedContainer;
+    }
+
     // Резервное копирование
     createBackup() {
         return {

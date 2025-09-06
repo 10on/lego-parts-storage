@@ -768,8 +768,8 @@ class ContainerView {
             name,
             quantity,
             color: color || 'Unknown',
-            colorId: this.getColorId(color),
-            image: this.generateImageUrl(partId, color),
+            colorId: await this.getColorId(color),
+            image: await this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
         };
 
@@ -1099,9 +1099,9 @@ class ContainerView {
         }
     }
 
-    generateImageUrl(partId, color) {
+    async generateImageUrl(partId, color) {
         // Простая генерация URL для BrickLink
-        const colorCode = this.getColorId(color) || '1';
+        const colorCode = await this.getColorId(color) || '1';
         return `https://img.bricklink.com/ItemImage/PN/${colorCode}/${partId}.png`;
     }
 
@@ -1180,62 +1180,24 @@ class ContainerView {
         }
     }
 
-    getColorId(color) {
+    async getColorId(color) {
         if (!color || color.trim() === '') {
             return '0'; // Дефолтный рендер BrickLink
         }
         
-        const colorMap = {
-            'Red': '4',
-            'Blue': '1',
-            'Yellow': '3',
-            'Green': '2',
-            'White': '1',
-            'Black': '0',
-            'Light Gray': '7',
-            'Dark Gray': '8',
-            'Light Blue': '9',
-            'Dark Blue': '10',
-            'Orange': '11',
-            'Purple': '12',
-            'Pink': '13',
-            'Brown': '14',
-            'Tan': '15',
-            'Lime': '16',
-            'Magenta': '17',
-            'Nougat': '18',
-            'Light Nougat': '19',
-            'Dark Nougat': '20',
-            'Silver': '21',
-            'Gold': '22',
-            'Copper': '23',
-            'Pearl': '24',
-            'Transparent': '25',
-            'Transparent Red': '26',
-            'Transparent Blue': '27',
-            'Transparent Yellow': '28',
-            'Transparent Green': '29',
-            'Transparent Orange': '30',
-            'Transparent Purple': '31',
-            'Transparent Pink': '32',
-            'Transparent Brown': '33',
-            'Transparent Light Blue': '34',
-            'Transparent Dark Blue': '35',
-            'Transparent Light Gray': '36',
-            'Transparent Dark Gray': '37',
-            'Transparent Black': '38',
-            'Transparent White': '39',
-            'Transparent Lime': '40',
-            'Transparent Magenta': '41',
-            'Transparent Nougat': '42',
-            'Transparent Light Nougat': '43',
-            'Transparent Dark Nougat': '44',
-            'Transparent Silver': '45',
-            'Transparent Gold': '46',
-            'Transparent Copper': '47',
-            'Transparent Pearl': '48'
-        };
-        return colorMap[color] || '0'; // Дефолтный рендер если цвет не найден
+        // Загружаем цвет из BrickLink данных
+        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using fallback color ID');
+            return '0'; // Fallback к дефолтному цвету
+        }
+        
+        try {
+            const colorData = await window.brickLinkData.getColorByName(color);
+            return colorData ? colorData.id.toString() : '0';
+        } catch (error) {
+            console.error('Error getting color ID:', error);
+            return '0'; // Fallback к дефолтному цвету
+        }
     }
 
     updateGridSize() {
@@ -1265,7 +1227,7 @@ class ContainerView {
             const partId = partValue.split(' - ')[0].trim();
             
             // Если цвет не указан, используем дефолтный рендер BrickLink (ID = 0)
-            const colorId = colorValue ? this.getColorId(colorValue) : '0';
+            const colorId = colorValue ? await this.getColorId(colorValue) : '0';
 
             try {
                 const imageUrl = this.getPartImageUrl(partId, colorId);

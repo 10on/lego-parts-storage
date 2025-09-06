@@ -5,9 +5,13 @@ class HomeView {
     }
 
     render(containers = []) {
+        console.log('🎨 Рендеринг контейнеров:', containers.length, 'контейнеров');
         this.containers = containers;
         const container = document.getElementById('containers-grid');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ Элемент containers-grid не найден');
+            return;
+        }
 
         if (containers.length === 0) {
             container.innerHTML = this.renderEmptyState();
@@ -15,6 +19,7 @@ class HomeView {
             container.innerHTML = containers.map(container => this.renderContainerCard(container)).join('');
         }
 
+        console.log('🔧 Настройка обработчиков событий...');
         this.setupEventListeners();
     }
 
@@ -41,6 +46,9 @@ class HomeView {
                 <div class="container-card-header">
                     <h3>${typeIcon} ${container.name}</h3>
                     <div class="container-actions">
+                        <button class="btn btn-sm btn-outline" data-action="clone" title="Клонировать">
+                            📋
+                        </button>
                         <button class="btn btn-sm btn-outline" data-action="edit" title="Редактировать">
                             ✏️
                         </button>
@@ -167,8 +175,13 @@ class HomeView {
     }
 
     setupEventListeners() {
+        console.log('🎯 Настройка обработчиков событий...');
+        
         // Клик по карточке контейнера
-        document.querySelectorAll('.container-card').forEach(card => {
+        const containerCards = document.querySelectorAll('.container-card');
+        console.log('📋 Найдено карточек контейнеров:', containerCards.length);
+        
+        containerCards.forEach(card => {
             card.addEventListener('click', (e) => {
                 // Игнорируем клики по кнопкам действий
                 if (e.target.closest('.container-actions')) {
@@ -181,6 +194,18 @@ class HomeView {
         });
 
         // Кнопки действий
+        const cloneButtons = document.querySelectorAll('[data-action="clone"]');
+        console.log('🔄 Найдено кнопок клонирования:', cloneButtons.length);
+        
+        cloneButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const containerId = btn.closest('.container-card').dataset.containerId;
+                console.log('🔄 Кнопка клонирования нажата для контейнера:', containerId);
+                this.showCloneModal(containerId);
+            });
+        });
+
         document.querySelectorAll('[data-action="edit"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -274,6 +299,178 @@ class HomeView {
                 window.app.showNotification('Контейнер обновлен!', 'success');
             }
         }
+    }
+
+    showCloneModal(containerId) {
+        console.log('🔍 Поиск контейнера для клонирования:', containerId);
+        console.log('📦 Доступные контейнеры:', this.containers.map(c => ({ id: c.id, name: c.name })));
+        
+        const container = this.containers.find(c => c.id === containerId);
+        if (!container) {
+            console.error('❌ Контейнер не найден:', containerId);
+            return;
+        }
+        
+        console.log('✅ Контейнер найден:', container.name);
+
+        // Проверяем, что window.app доступен
+        if (!window.app) {
+            console.error('❌ window.app не доступен');
+            return;
+        }
+
+        console.log('🔧 Показываем модальное окно...');
+        const content = `
+            <div class="clone-modal-content">
+                <p>Выберите, как клонировать контейнер "<strong>${container.name}</strong>":</p>
+                <div class="clone-options">
+                    <label class="clone-option">
+                        <input type="radio" name="clone-type" value="empty" checked>
+                        <div class="option-content">
+                            <div class="option-icon">📦</div>
+                            <div class="option-text">
+                                <strong>Пустой контейнер</strong>
+                                <small>Только структура и размеры</small>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="clone-option">
+                        <input type="radio" name="clone-type" value="with-content">
+                        <div class="option-content">
+                            <div class="option-icon">📋</div>
+                            <div class="option-text">
+                                <strong>С содержимым</strong>
+                                <small>Копировать все детали и их расположение</small>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                <div class="clone-actions">
+                    <button class="btn btn-primary" id="confirm-clone-btn">Клонировать</button>
+                    <button class="btn btn-secondary" id="cancel-clone-btn">Отмена</button>
+                </div>
+            </div>
+        `;
+
+        if (window.app) {
+            window.app.showModal('Клонировать контейнер', content);
+            
+            // Обработчики кнопок
+            const confirmBtn = document.getElementById('confirm-clone-btn');
+            const cancelBtn = document.getElementById('cancel-clone-btn');
+            
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', () => {
+                    console.log('✅ Кнопка "Клонировать" нажата');
+                    this.cloneContainer(containerId);
+                });
+            } else {
+                console.error('❌ Кнопка confirm-clone-btn не найдена');
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    console.log('❌ Кнопка "Отмена" нажата');
+                    window.app.hideModal();
+                });
+            } else {
+                console.error('❌ Кнопка cancel-clone-btn не найдена');
+            }
+        }
+    }
+
+    async cloneContainer(containerId) {
+        const cloneType = document.querySelector('input[name="clone-type"]:checked').value;
+        const includeContent = cloneType === 'with-content';
+        
+        if (window.app) {
+            // Находим оригинальный контейнер
+            const originalContainer = window.app.containers.find(c => c.id === containerId);
+            if (!originalContainer) {
+                window.app.showNotification('Контейнер не найден', 'error');
+                return;
+            }
+
+            // Создаем клонированный контейнер
+            let clonedContainer;
+            if (originalContainer && typeof originalContainer.clone === 'function') {
+                // Если это экземпляр класса Container
+                clonedContainer = originalContainer.clone(includeContent);
+            } else {
+                // Если это обычный объект, создаем клон вручную
+                clonedContainer = this.cloneContainerData(originalContainer, includeContent);
+            }
+            
+            if (clonedContainer) {
+                // Добавляем клонированный контейнер в массив
+                window.app.containers.push(clonedContainer);
+                
+                // Сохраняем изменения
+                await window.app.saveProject();
+                
+                // Перерендериваем список
+                this.render(window.app.containers);
+                
+                // Закрываем модальное окно
+                window.app.hideModal();
+                
+                // Показываем уведомление
+                const message = includeContent ? 
+                    'Контейнер клонирован с содержимым!' : 
+                    'Пустой контейнер создан!';
+                window.app.showNotification(message, 'success');
+            } else {
+                window.app.showNotification('Ошибка при клонировании контейнера', 'error');
+            }
+        }
+    }
+
+    cloneContainerData(originalContainer, includeContent = false) {
+        const clonedContainer = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            name: `${originalContainer.name} (копия)`,
+            type: originalContainer.type,
+            rows: originalContainer.rows,
+            cols: originalContainer.cols,
+            color: originalContainer.color,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (includeContent && originalContainer.cells) {
+            // Глубокое копирование ячеек с содержимым
+            clonedContainer.cells = originalContainer.cells.map(cell => {
+                if (!cell) return null;
+                
+                // Копируем структуру ячейки
+                const clonedCell = {
+                    type: cell.type,
+                    partId: cell.partId,
+                    name: cell.name,
+                    color: cell.color,
+                    colorId: cell.colorId,
+                    quantity: cell.quantity,
+                    image: cell.image,
+                    lastUpdated: cell.lastUpdated
+                };
+
+                // Если это объединенная ячейка, копируем дополнительные свойства
+                if (cell.type === 'merged') {
+                    clonedCell.cellCount = cell.cellCount;
+                    clonedCell.items = cell.items ? cell.items.map(item => ({
+                        ...item,
+                        id: Date.now().toString(36) + Math.random().toString(36).substr(2) // Новый ID для каждого элемента
+                    })) : [];
+                }
+
+                return clonedCell;
+            });
+        } else {
+            // Создаем пустую сетку того же размера
+            clonedContainer.cells = Array(originalContainer.rows * originalContainer.cols).fill(null);
+        }
+
+        return clonedContainer;
     }
 
     async deleteContainer(containerId) {

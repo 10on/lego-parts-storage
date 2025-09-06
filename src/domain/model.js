@@ -293,6 +293,51 @@ class Container {
         this.updatedAt = new Date().toISOString();
     }
 
+    clone(includeContent = false) {
+        const clonedData = {
+            name: `${this.name} (копия)`,
+            type: this.type,
+            rows: this.rows,
+            cols: this.cols,
+            color: this.color
+        };
+
+        if (includeContent && this.cells) {
+            // Глубокое копирование ячеек с содержимым
+            clonedData.cells = this.cells.map(cell => {
+                if (!cell) return null;
+                
+                // Копируем структуру ячейки
+                const clonedCell = {
+                    type: cell.type,
+                    partId: cell.partId,
+                    name: cell.name,
+                    color: cell.color,
+                    colorId: cell.colorId,
+                    quantity: cell.quantity,
+                    image: cell.image,
+                    lastUpdated: cell.lastUpdated
+                };
+
+                // Если это объединенная ячейка, копируем дополнительные свойства
+                if (cell.type === 'merged') {
+                    clonedCell.cellCount = cell.cellCount;
+                    clonedCell.items = cell.items ? cell.items.map(item => ({
+                        ...item,
+                        id: Date.now().toString(36) + Math.random().toString(36).substr(2) // Новый ID для каждого элемента
+                    })) : [];
+                }
+
+                return clonedCell;
+            });
+        } else {
+            // Создаем пустую сетку того же размера
+            clonedData.cells = Array(this.rows * this.cols).fill(null);
+        }
+
+        return new Container(clonedData);
+    }
+
     toJSON() {
         return {
             id: this.id,

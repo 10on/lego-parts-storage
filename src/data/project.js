@@ -81,16 +81,16 @@ class MockData {
                 colorId: '3',
                 quantity: 30,
                 image: 'https://img.bricklink.com/ItemImage/PN/3/3003.png',
-                lastUsed: '2024-01-18T11:20:00Z'
+                lastUsed: '2024-01-18T12:20:00Z'
             },
             {
                 id: 'pile-4',
                 partId: '3004',
                 name: 'Brick 1x2',
                 color: 'Green',
-                colorId: '2',
+                colorId: '6',
                 quantity: 50,
-                image: 'https://img.bricklink.com/ItemImage/PN/2/3004.png',
+                image: 'https://img.bricklink.com/ItemImage/PN/6/3004.png',
                 lastUsed: '2024-01-17T09:15:00Z'
             },
             {
@@ -133,7 +133,7 @@ class MockData {
                 partId: '3004',
                 name: 'Brick 1x2',
                 category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/2/3004.png',
+                image: 'https://img.bricklink.com/ItemImage/PN/6/3004.png',
                 colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
             },
             {
@@ -199,8 +199,8 @@ class MockData {
                 partId: '3004',
                 name: 'Brick 1x2',
                 color: 'Green',
-                colorId: '2',
-                image: 'https://img.bricklink.com/ItemImage/PN/2/3004.png'
+                colorId: '6',
+                image: 'https://img.bricklink.com/ItemImage/PN/6/3004.png'
             },
             {
                 partId: '3005',

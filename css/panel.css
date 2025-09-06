@@ -1,5 +1,85 @@
 /* Стили для панелей и дополнительных компонентов */
 
+/* Стили для модального окна клонирования */
+.clone-modal-content {
+    padding: 1rem 0;
+}
+
+.clone-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.clone-option {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--bg-primary);
+}
+
+.clone-option:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.clone-option input[type="radio"] {
+    margin-right: 1rem;
+    transform: scale(1.2);
+}
+
+.clone-option input[type="radio"]:checked + .option-content {
+    color: var(--primary-color);
+}
+
+.clone-option:has(input[type="radio"]:checked) {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.option-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.option-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    width: 2rem;
+    text-align: center;
+}
+
+.option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.option-text strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.option-text small {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.clone-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
 /* Панель кучи */
 .pile-content {
     background-color: var(--bg-primary);

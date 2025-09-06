@@ -406,7 +406,7 @@ class PileView {
             partId,
             name,
             color,
-            colorId: this.getColorId(color),
+            colorId: await this.getColorId(color),
             quantity,
             image,
             lastUsed: new Date().toISOString()
@@ -433,15 +433,19 @@ class PileView {
         console.log('Распределение выбранных элементов:', Array.from(this.selectedItems));
     }
 
-    getColorId(color) {
-        const colorMap = {
-            'Red': '4',
-            'Blue': '1',
-            'Yellow': '3',
-            'Green': '2',
-            'White': '1',
-            'Black': '0'
-        };
-        return colorMap[color] || '1';
+    async getColorId(color) {
+        // Загружаем цвет из BrickLink данных
+        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+            console.warn('BrickLink data not loaded, using fallback color ID');
+            return '1'; // Fallback к белому цвету
+        }
+        
+        try {
+            const colorData = await window.brickLinkData.getColorByName(color);
+            return colorData ? colorData.id.toString() : '1';
+        } catch (error) {
+            console.error('Error getting color ID:', error);
+            return '1'; // Fallback к белому цвету
+        }
     }
 }
