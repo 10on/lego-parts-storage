@@ -110,6 +110,11 @@ class SettingsView {
                     <button class="btn btn-outline" id="import-settings-btn">Импорт настроек</button>
                     <button class="btn btn-outline" id="reset-settings-btn">Сбросить настройки</button>
                 </div>
+                <div class="settings-actions danger-zone">
+                    <h4>Опасная зона</h4>
+                    <p>Действия ниже необратимы</p>
+                    <button class="btn btn-danger" id="clear-all-data-btn">🗑️ Очистить все данные</button>
+                </div>
             </div>
 
             <div class="settings-section">
@@ -166,6 +171,10 @@ class SettingsView {
 
         document.getElementById('reset-settings-btn')?.addEventListener('click', () => {
             this.resetSettings();
+        });
+
+        document.getElementById('clear-all-data-btn')?.addEventListener('click', () => {
+            this.clearAllData();
         });
     }
 
@@ -337,6 +346,60 @@ class SettingsView {
             
             if (window.app) {
                 window.app.showNotification('Настройки сброшены', 'success');
+            }
+        }
+    }
+
+    clearAllData() {
+        if (confirm('⚠️ ВНИМАНИЕ! Это действие полностью удалит ВСЕ данные приложения:\n\n• Все контейнеры и их содержимое\n• Все детали в куче\n• Все настройки\n• Весь прогресс\n\nДанное действие НЕОБРАТИМО!\n\nВы уверены, что хотите продолжить?')) {
+            if (confirm('Последнее предупреждение!\n\nВы действительно хотите удалить все данные?\nЭто действие нельзя отменить!')) {
+                try {
+                    // Получаем все ключи localStorage, связанные с приложением
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (
+                            key.startsWith('lego-storage') || 
+                            key.includes('lego') ||
+                            key === 'lego-storage-project' ||
+                            key === 'lego-storage-settings' ||
+                            key === 'lego-storage-containers'
+                        )) {
+                            keysToRemove.push(key);
+                        }
+                    }
+
+                    // Удаляем все найденные ключи
+                    keysToRemove.forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+
+                    // Сбрасываем настройки к дефолтным
+                    this.settings = {
+                        storageAdapter: 'local',
+                        imageSource: 'bricklink',
+                        theme: 'light',
+                        autoSave: true,
+                        gridSize: 'medium',
+                        notifications: true
+                    };
+                    
+                    // Показываем уведомление об успехе
+                    if (window.app) {
+                        window.app.showNotification('Все данные успешно удалены', 'success');
+                    }
+
+                    // Перезагружаем страницу через короткий таймаут для отображения уведомления
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Ошибка при очистке данных:', error);
+                    if (window.app) {
+                        window.app.showNotification('Ошибка при очистке данных', 'error');
+                    }
+                }
             }
         }
     }

@@ -209,6 +209,39 @@ body {
     background-color: var(--primary-color);
 }
 
+.btn-danger {
+    color: white;
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* Опасная зона в настройках */
+.danger-zone {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 2px solid var(--danger-color);
+    border-radius: var(--border-radius);
+    background-color: #fff5f5;
+}
+
+.danger-zone h4 {
+    color: var(--danger-color);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.danger-zone p {
+    color: #721c24;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
 /* Формы */
 .form-select {
     display: block;
