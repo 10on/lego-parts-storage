@@ -157,6 +157,11 @@ class ContainerView {
         
         console.log('Cell index:', cellIndex, 'Cell data:', cellData);
 
+        // Создаем модальное окно
+        const modal = document.createElement('div');
+        modal.className = 'cell-editor-modal';
+        modal.id = 'cell-editor-modal';
+
         const editor = document.createElement('div');
         editor.className = 'cell-editor';
         
@@ -168,22 +173,40 @@ class ContainerView {
             return;
         }
         
-        cell.appendChild(editor);
+        modal.appendChild(editor);
+        document.body.appendChild(modal);
         cell.classList.add('editing');
         
-        console.log('Editor appended to cell, setting up listeners...');
+        console.log('Modal editor created and added to body');
 
         // Обработчики редактора
         this.setupCellEditorListeners(editor, cell, cellIndex);
         
-        console.log('Cell editor should be visible now!');
+        // Закрытие по клику на фон
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeCellEditor();
+            }
+        });
+        
+        // Закрытие по ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeCellEditor();
+            }
+        }, { once: true });
+        
+        console.log('Cell editor modal should be visible now!');
     }
 
     renderCellEditor(cellData, cellIndex) {
         return `
             <div class="cell-editor-header">
-                <h4>${cellData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь'}</h4>
-                <span class="cell-position">Ячейка ${cellIndex + 1}</span>
+                <div class="header-left">
+                    <h4>${cellData ? '✏️ Редактировать ячейку' : '➕ Добавить деталь'}</h4>
+                    <span class="cell-position">Ячейка ${cellIndex + 1}</span>
+                </div>
+                <button type="button" class="close-btn" id="modal-close">✕</button>
             </div>
             <form class="cell-editor-form">
                 <div class="form-row">
@@ -238,6 +261,7 @@ class ContainerView {
         const form = editor.querySelector('.cell-editor-form');
         const cancelBtn = editor.querySelector('#cell-cancel');
         const clearBtn = editor.querySelector('#cell-clear');
+        const closeBtn = editor.querySelector('#modal-close');
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -249,18 +273,15 @@ class ContainerView {
             this.closeCellEditor();
         });
 
+        closeBtn.addEventListener('click', () => {
+            this.closeCellEditor();
+        });
+
         if (clearBtn) {
             clearBtn.addEventListener('click', () => {
                 this.clearCellData(cell, cellIndex);
             });
         }
-
-        // Закрытие по клику вне редактора
-        document.addEventListener('click', (e) => {
-            if (!editor.contains(e.target) && !cell.contains(e.target)) {
-                this.closeCellEditor();
-            }
-        }, { once: true });
     }
 
     async saveCellData(cell, cellIndex, editor) {
@@ -364,9 +385,9 @@ class ContainerView {
     }
 
     closeCellEditor() {
-        const editor = document.querySelector('.cell-editor');
-        if (editor) {
-            editor.remove();
+        const modal = document.getElementById('cell-editor-modal');
+        if (modal) {
+            modal.remove();
         }
         
         document.querySelectorAll('.grid-cell.editing').forEach(cell => {
