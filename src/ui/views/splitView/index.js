@@ -266,10 +266,10 @@ class SplitView {
 
     renderCellBuffer() {
         if (this.cellBuffer.length === 0) {
-            return '<div class="buffer-empty"><p>Кликните на ячейку, затем сюда для перемещения в буфер</p></div>';
+            return '<div class="buffer-empty"><p>Выделите ячейку и кликните сюда для перемещения в буфер</p></div>';
         }
 
-        return this.cellBuffer.map((cellData, index) => {
+        const bufferCells = this.cellBuffer.map((cellData, index) => {
             const isSelected = this.selectedCell && 
                 this.selectedCell.source === 'buffer' && 
                 this.selectedCell.bufferIndex === index;
@@ -293,6 +293,15 @@ class SplitView {
                 </div>
             `;
         }).join('');
+        
+        // Добавляем подсказку для добавления новых элементов
+        const addHint = `
+            <div class="buffer-add-hint">
+                <p>Выделите ячейку и кликните сюда для добавления в буфер</p>
+            </div>
+        `;
+        
+        return bufferCells + addHint;
     }
 
     renderContainersList() {
@@ -508,6 +517,8 @@ class SplitView {
         this.bufferClickHandler = (e) => {
             if (e.target.classList.contains('buffer-empty') || e.target.closest('.buffer-empty')) {
                 this.handleBufferClick();
+            } else if (e.target.classList.contains('buffer-add-hint') || e.target.closest('.buffer-add-hint')) {
+                this.handleBufferClick();
             } else if (e.target.classList.contains('buffer-cell') || e.target.closest('.buffer-cell')) {
                 this.handleBufferCellClick(e.target.closest('.buffer-cell'));
             }
@@ -552,6 +563,11 @@ class SplitView {
         if (this.selectedCell) {
             // Перемещаем выделенную ячейку в буфер
             this.moveToBuffer();
+        } else {
+            // Если нет выделенной ячейки, показываем подсказку
+            if (window.app) {
+                window.app.showNotification('Сначала выделите ячейку, которую хотите переместить в буфер', 'info');
+            }
         }
     }
 

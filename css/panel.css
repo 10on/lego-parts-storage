@@ -807,6 +807,25 @@
     padding: 2rem;
 }
 
+.buffer-add-hint {
+    width: 100%;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 123, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.buffer-add-hint:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-color: var(--primary-color);
+}
+
 .buffer-cell {
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
