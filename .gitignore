@@ -130,3 +130,6 @@ firebase-debug.*.log
 
 # Local development
 .local/
+
+# Aider AI assistant files
+.aider.*
