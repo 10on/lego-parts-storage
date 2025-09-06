@@ -13,6 +13,7 @@
 
 /* Ячейка сетки */
 .grid-cell {
+    position: relative;
     background-color: var(--bg-primary);
     border: 2px solid var(--border-color);
     border-radius: var(--border-radius);
@@ -24,7 +25,6 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s ease;
-    position: relative;
     overflow: hidden;
 }
 
