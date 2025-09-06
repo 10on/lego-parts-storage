@@ -175,9 +175,6 @@ class ContainerView {
             return `
                 <div class="cell-content">
                 ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
-                <div class="cell-part-id">${partData.partId}</div>
-                <div class="cell-quantity">${partData.quantity !== null && partData.quantity !== undefined ? partData.quantity : '?'}</div>
-                <div class="cell-color">${partData.color}</div>
                 </div>
             `;
         }
@@ -190,15 +187,13 @@ class ContainerView {
         // Сортируем детали по количеству (больше сначала)
         const sortedParts = [...parts].sort((a, b) => (b.quantity || 1) - (a.quantity || 1));
         
-        // Показываем максимум 3 детали, остальные скрываем
+        // Показываем максимум 3 детали в ряд, остальные скрываем
         const visibleParts = sortedParts.slice(0, 3);
         const hiddenCount = Math.max(0, sortedParts.length - 3);
         
         const partsHtml = visibleParts.map((part, index) => {
-            const isMain = index === 0;
-            
             return `
-                <div class="cell-part ${isMain ? 'main-part' : 'secondary-part'}">
+                <div class="cell-part">
                     <div class="part-image-container-small">
                         ${part.image ? `<img src="${part.image}" alt="${part.name}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
                         <div class="part-image-placeholder-small" style="${part.image ? 'display: flex;' : ''}">
@@ -210,7 +205,7 @@ class ContainerView {
         }).join('');
 
         const hiddenHtml = hiddenCount > 0 ? 
-            `<div class="hidden-parts">+${hiddenCount} more</div>` : '';
+            `<div class="hidden-parts">+${hiddenCount}</div>` : '';
 
         return `
             <div class="cell-content multiple-parts ${isMerged ? 'merged' : ''}">

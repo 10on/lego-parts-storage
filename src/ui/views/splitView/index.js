@@ -136,15 +136,76 @@ class SplitView {
             return '<div class="cell-empty">+</div>';
         }
 
-        const totalQuantity = cell.items.reduce((sum, item) => sum + item.quantity, 0);
-        const partNames = cell.items.map(item => item.name).join(', ');
+        const items = cell.items;
+        const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        if (items.length <= 4) {
+            // 4 и меньше - показываем по углам
+            return this.renderCornerImages(items);
+        } else {
+            // Больше 4 - показываем 3 по углам + многоточие
+            return this.renderCornerImagesWithMore(items.slice(0, 3), totalQuantity);
+        }
+    }
+
+    renderCornerImages(items) {
+        if (items.length === 1) {
+            // Одна деталь - по центру
+            const item = items[0];
+            const imageUrl = item.image || item.img;
+            if (imageUrl) {
+                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name} (${item.quantity})"></div>`;
+            } else {
+                const emoji = this.getPartEmoji(item);
+                return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${item.name} (${item.quantity})">${emoji}</div></div>`;
+            }
+        }
+        
+        // Несколько деталей - по углам
+        const images = items.map((item, index) => {
+            const position = this.getCornerPosition(index, items.length);
+            const imageUrl = item.image || item.img;
+            if (imageUrl) {
+                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
+            } else {
+                const emoji = this.getPartEmoji(item);
+                return `<div class="cell-part-emoji corner-${position}" title="${item.name} (${item.quantity})">${emoji}</div>`;
+            }
+        }).join('');
+        
+        return `<div class="cell-content corner-layout">${images}</div>`;
+    }
+
+    renderCornerImagesWithMore(items, totalQuantity) {
+        const images = items.map((item, index) => {
+            const position = this.getCornerPosition(index, 3);
+            const imageUrl = item.image || item.img;
+            if (imageUrl) {
+                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
+            } else {
+                const emoji = this.getPartEmoji(item);
+                return `<div class="cell-part-emoji corner-${position}" title="${item.name} (${item.quantity})">${emoji}</div>`;
+            }
+        }).join('');
+        
+        const moreCount = totalQuantity - items.reduce((sum, item) => sum + item.quantity, 0);
+        const moreText = moreCount > 0 ? `+${moreCount}` : `+${items.length - 3}`;
         
         return `
-            <div class="cell-content">
-                <div class="cell-parts">${partNames}</div>
-                <div class="cell-quantity">${totalQuantity}</div>
+            <div class="cell-content corner-layout">
+                ${images}
+                <div class="cell-more corner-bottom-right" title="Еще ${moreText} деталей">⋯</div>
             </div>
         `;
+    }
+
+    getCornerPosition(index, total) {
+        const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+        return positions[index] || 'top-left';
+    }
+
+    getPartEmoji(item) {
+        return '🧩';
     }
 
     calculateContainerStats(container) {
@@ -169,13 +230,19 @@ class SplitView {
             
             // Безопасная обработка данных ячейки
             const parts = cellData.parts || cellData.items || [];
-            const partNames = parts.map(part => part.name || part).join(', ');
-            const totalQuantity = cellData.totalQuantity || (parts.reduce((sum, item) => sum + (item.quantity || 0), 0));
+            
+            // Используем ту же логику отображения
+            let content;
+            if (parts.length <= 4) {
+                content = this.renderCornerImages(parts);
+            } else {
+                const totalQuantity = parts.reduce((sum, item) => sum + (item.quantity || 0), 0);
+                content = this.renderCornerImagesWithMore(parts.slice(0, 3), totalQuantity);
+            }
             
             return `
                 <div class="buffer-cell ${isSelected ? 'selected' : ''}" data-buffer-index="${index}">
-                    <div class="cell-parts">${partNames}</div>
-                    <div class="cell-quantity">${totalQuantity}</div>
+                    ${content}
                     <button class="remove-btn" data-action="remove-from-buffer" data-index="${index}">×</button>
                 </div>
             `;
