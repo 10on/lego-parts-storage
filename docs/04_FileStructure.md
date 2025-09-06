@@ -1,0 +1,54 @@
+# Структура исходников
+
+```
+/index.html
+/css/
+  app.css
+  grid.css
+  panel.css
+/src/
+  main.js
+  router.js
+  events.js
+  utils/
+  data/
+    storage/
+      index.js
+      local.js
+      idb.js
+      firebase.js
+    project.js
+    containers.js
+    catalog.js
+    images/
+      index.js
+      bricklink.js
+      rebrickable.js
+  domain/
+    model.js
+    layout.js
+    assign.js
+    duplicates.js
+  ui/
+    appShell/
+      shell.js
+      sidebar.js
+    views/
+      homeView.js
+      containerView/
+        index.js
+        grid.js
+        cellEditor.js
+      pileView/index.js
+      splitView/index.js
+      duplicatesView/index.js
+      importView/index.js
+      settingsView/index.js
+  features/
+    dragdrop/dnd.js
+    snapshots/snapshots.js
+/data/
+  project.json
+  containers/
+  catalog/
+```
