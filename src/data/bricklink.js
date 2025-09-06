@@ -29,81 +29,28 @@ class BrickLinkData {
     }
 
     /**
-     * Загружает данные деталей из CSV
+     * Загружает данные деталей из JSON
      */
     async loadParts() {
-        const response = await fetch('/data/bricklink/parts.csv');
-        const text = await response.text();
+        const response = await fetch('/data/bricklink/parts.json');
+        const data = await response.json();
         
-        const lines = text.split('\n');
-        const headers = lines[0].split('\t');
-        
-        this.parts = [];
-        
-        for (let i = 3; i < lines.length; i++) { // Пропускаем заголовок и пустые строки
-            const line = lines[i].trim();
-            if (!line) continue;
-            
-            const values = line.split('\t');
-            if (values.length < 4) continue;
-            
-            const part = {
-                categoryId: values[0] || '',
-                categoryName: values[1] || '',
-                partId: values[2] || '',
-                name: values[3] || '',
-                alternateId: values[4] || ''
-            };
-            
-            // Пропускаем стикеры и homemaker детали
-            if (part.categoryName === 'Sticker Sheet' || part.categoryName === 'Homemaker') {
-                continue;
-            }
-            
-            if (part.partId && part.name) {
-                this.parts.push(part);
-            }
-        }
+        this.parts = data.map(part => ({
+            categoryId: part.catId,
+            categoryName: part.cat,
+            partId: part.id,
+            name: part.name
+        }));
         
         console.log(`📦 Loaded ${this.parts.length} parts`);
     }
 
     /**
-     * Загружает данные цветов из CSV
+     * Загружает данные цветов из JSON
      */
     async loadColors() {
-        const response = await fetch('/data/bricklink/colors.csv');
-        const text = await response.text();
-        
-        const lines = text.split('\n');
-        
-        this.colors = [];
-        
-        for (let i = 3; i < lines.length; i++) { // Пропускаем заголовок и пустые строки
-            const line = lines[i].trim();
-            if (!line) continue;
-            
-            const values = line.split('\t');
-            if (values.length < 4) continue;
-            
-            const color = {
-                id: values[0] || '',
-                name: values[1] || '',
-                rgb: values[2] || '',
-                type: values[3] || '',
-                parts: parseInt(values[4]) || 0
-            };
-            
-            // Пропускаем специальные цвета
-            if (color.name === '(Not Applicable)' || !color.name || !color.rgb) {
-                continue;
-            }
-            
-            this.colors.push(color);
-        }
-        
-        // Сортируем по популярности (количеству деталей)
-        this.colors.sort((a, b) => b.parts - a.parts);
+        const response = await fetch('/data/bricklink/colors.json');
+        this.colors = await response.json();
         
         console.log(`🎨 Loaded ${this.colors.length} colors`);
     }
