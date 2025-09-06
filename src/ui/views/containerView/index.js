@@ -7,12 +7,17 @@ class ContainerView {
     }
 
     setContainer(container) {
+        console.log('Setting container:', container);
         this.container = container;
         this.render();
     }
 
     render() {
-        if (!this.container) return;
+        console.log('Rendering container view:', this.container);
+        if (!this.container) {
+            console.error('No container to render!');
+            return;
+        }
 
         // Обновляем заголовок
         const title = document.getElementById('container-title');
@@ -59,10 +64,12 @@ class ContainerView {
 
         // Добавляем обработчики событий прямо при создании ячейки
         cell.addEventListener('click', (e) => {
+            console.log('Cell click event triggered!', index);
             this.handleCellClick(e, cell);
         });
 
         cell.addEventListener('dblclick', (e) => {
+            console.log('Cell double-click event triggered!', index);
             this.handleCellDoubleClick(e, cell);
         });
 
@@ -118,6 +125,7 @@ class ContainerView {
     }
 
     handleCellClick(e, cell) {
+        console.log('Cell clicked!', cell, this.isEditing);
         if (this.isEditing) {
             this.toggleCellSelection(cell);
         } else {
@@ -140,21 +148,35 @@ class ContainerView {
     }
 
     openCellEditor(cell) {
+        console.log('Opening cell editor for cell:', cell);
         // Закрываем предыдущий редактор
         this.closeCellEditor();
 
         const cellIndex = parseInt(cell.dataset.cellIndex);
         const cellData = this.container.cells[cellIndex];
+        
+        console.log('Cell index:', cellIndex, 'Cell data:', cellData);
 
         const editor = document.createElement('div');
         editor.className = 'cell-editor';
-        editor.innerHTML = this.renderCellEditor(cellData, cellIndex);
+        
+        try {
+            editor.innerHTML = this.renderCellEditor(cellData, cellIndex);
+            console.log('Editor HTML created successfully');
+        } catch (error) {
+            console.error('Error creating editor HTML:', error);
+            return;
+        }
         
         cell.appendChild(editor);
         cell.classList.add('editing');
+        
+        console.log('Editor appended to cell, setting up listeners...');
 
         // Обработчики редактора
         this.setupCellEditorListeners(editor, cell, cellIndex);
+        
+        console.log('Cell editor should be visible now!');
     }
 
     renderCellEditor(cellData, cellIndex) {
