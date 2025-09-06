@@ -194,7 +194,7 @@
 .cell-part {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: center;
     width: 100%;
     padding: 0.125rem;
     border-radius: 2px;
@@ -251,24 +251,6 @@
     border: 1px solid rgba(108, 117, 125, 0.2);
 }
 
-.part-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    flex: 1;
-    min-width: 0;
-}
-
-.part-id {
-    font-size: 0.625rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
 
 
 .hidden-parts {

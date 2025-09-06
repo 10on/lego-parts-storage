@@ -200,9 +200,6 @@ class ContainerView {
                             <div class="placeholder-icon-tiny">🧱</div>
                         </div>
                     </div>
-                    <div class="part-info">
-                        <div class="part-id">${part.partId}</div>
-                    </div>
                 </div>
             `;
         }).join('');
