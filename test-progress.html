@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест прогресс-бара</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/loading-progress.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Тест прогресс-бара</h1>
+        <button id="test-progress-btn" class="btn btn-primary">Запустить тест прогресса</button>
+        <div id="test-results"></div>
+    </div>
+
+    <script src="src/ui/components/LoadingProgress.js"></script>
+    <script>
+        document.getElementById('test-progress-btn').addEventListener('click', async () => {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<p>Запуск теста...</p>';
+            
+            // Создаем прогресс-бар
+            const progress = new LoadingProgress();
+            const steps = [
+                { title: 'Тест 1', description: 'Первый тест' },
+                { title: 'Тест 2', description: 'Второй тест' },
+                { title: 'Тест 3', description: 'Третий тест' }
+            ];
+            
+            progress.show(steps);
+            
+            try {
+                // Тест 1: Плавное обновление прогресса
+                for (let i = 0; i <= 100; i += 10) {
+                    progress.updateStep(0, i, `Прогресс: ${i}%`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                progress.completeStep(0, 'Первый тест завершен');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Тест 2: Быстрое обновление
+                for (let i = 0; i <= 100; i += 5) {
+                    progress.updateStep(1, i, `Быстрый прогресс: ${i}%`);
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                
+                progress.completeStep(1, 'Второй тест завершен');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Тест 3: Медленное обновление
+                for (let i = 0; i <= 100; i += 2) {
+                    progress.updateStep(2, i, `Медленный прогресс: ${i}%`);
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                
+                progress.completeStep(2, 'Третий тест завершен');
+                
+                // Скрываем прогресс через 2 секунды
+                setTimeout(() => {
+                    progress.hide();
+                    resultsDiv.innerHTML = '<p style="color: green;">✅ Тест завершен успешно! Прогресс-бар должен был двигаться плавно.</p>';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Ошибка теста:', error);
+                resultsDiv.innerHTML = `<p style="color: red;">❌ Ошибка: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

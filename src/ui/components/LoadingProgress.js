@@ -56,6 +56,9 @@ class LoadingProgress {
 
         this.currentStep = stepIndex;
         
+        // Добавляем отладочную информацию
+        console.log(`🔄 Progress update: Step ${stepIndex}, Progress ${progress}%, Details: ${details}`);
+        
         // Плавно обновляем прогресс
         this.renderCurrentStep(stepIndex, progress, details);
     }
@@ -74,34 +77,56 @@ class LoadingProgress {
         const stepClass = isCompleted ? 'completed' : 'active';
         
         // Проверяем, существует ли уже элемент прогресса
+        const existingStep = container.querySelector('.progress-step');
         const existingProgressBar = container.querySelector('.progress-bar');
         const shouldAnimate = existingProgressBar && progress > 0;
         
-        container.innerHTML = `
-            <div class="progress-step ${stepClass}">
-                <div class="step-header">
-                    <div class="step-number">${stepIndex + 1}</div>
-                    <div class="step-info">
-                        <div class="step-title">${step.title}</div>
-                        <div class="step-description">${step.description}</div>
-                    </div>
-                </div>
-                <div class="step-progress">
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar" style="width: ${Math.min(100, Math.max(0, progress))}%"></div>
+        // Если это новый шаг, создаем новый элемент
+        if (!existingStep || existingStep.dataset.stepIndex !== stepIndex.toString()) {
+            container.innerHTML = `
+                <div class="progress-step ${stepClass}" data-step-index="${stepIndex}">
+                    <div class="step-header">
+                        <div class="step-number">${stepIndex + 1}</div>
+                        <div class="step-info">
+                            <div class="step-title">${step.title}</div>
+                            <div class="step-description">${step.description}</div>
                         </div>
                     </div>
-                    <div class="progress-details">${details || 'Ожидание...'}</div>
+                    <div class="step-progress">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar" style="width: ${Math.min(100, Math.max(0, progress))}%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-details">${details || 'Ожидание...'}</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            // Обновляем существующий элемент
+            const stepElement = container.querySelector('.progress-step');
+            const progressBar = container.querySelector('.progress-bar');
+            const progressDetails = container.querySelector('.progress-details');
+            
+            // Обновляем класс шага
+            stepElement.className = `progress-step ${stepClass}`;
+            
+            // Обновляем прогресс-бар с анимацией
+            if (progressBar) {
+                progressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+            }
+            
+            // Обновляем детали
+            if (progressDetails) {
+                progressDetails.textContent = details || 'Ожидание...';
+            }
+        }
         
         // Добавляем анимацию для плавного перехода
         if (shouldAnimate) {
             const progressBar = container.querySelector('.progress-bar');
             if (progressBar) {
-                progressBar.style.transition = 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                progressBar.style.transition = 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             }
         }
     }

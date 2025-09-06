@@ -59,7 +59,7 @@ class BrickLinkData {
             if (progress) progress.completeStep(5, 'Цвета загружены');
             
             // Этап 7: Загрузка деталей
-            if (progress) progress.updateStep(6, 50, 'Сохранение деталей...');
+            if (progress) progress.updateStep(6, 0, 'Начинаем загрузку деталей...');
             
             // Создаем callback для loadData
             const progressCallback = progress ? (step, percent, message) => {

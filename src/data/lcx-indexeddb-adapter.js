@@ -201,7 +201,7 @@ class LCXIndexedDBAdapter {
      * Массовое сохранение данных с отслеживанием прогресса
      */
     async saveBulkDataWithProgress(storeName, data, progressCallback) {
-        const batchSize = 200; // Еще меньший размер батча для более частых обновлений
+        const batchSize = 100; // Уменьшаем размер батча для более частых обновлений
         const totalItems = data.length;
         let processedItems = 0;
         
@@ -233,6 +233,8 @@ class LCXIndexedDBAdapter {
             const progress = Math.min(100, Math.round((processedItems / totalItems) * 100));
             if (progressCallback) {
                 const stepNumber = this.getStepNumberForStore(storeName);
+                // Исправляем передачу параметров: step, percent, message
+                console.log(`📊 Progress callback: Step ${stepNumber}, Progress ${progress}%, Store: ${storeName}, Processed: ${processedItems}/${totalItems}`);
                 progressCallback(stepNumber, progress, `Сохранено ${processedItems} из ${totalItems} записей`);
             }
             
@@ -578,23 +580,14 @@ class LCXIndexedDBAdapter {
         console.log('🔄 Loading data from LCX object to IndexedDB...');
         
         try {
-            // Шаг 4: Загрузка категорий
-            if (progressCallback) progressCallback(4, 100, 'Сохранение категорий...');
-            console.log('📊 Loading categories...');
+            // Шаг 4: Трансформация данных
+            if (progressCallback) progressCallback(4, 0, 'Трансформация данных...');
+            console.log('📊 Transforming data...');
             const transformedData = await this.lcxParser.transform(lcxData, progressCallback);
             
-            // Шаг 5: Загрузка цветов
-            if (progressCallback) progressCallback(5, 100, 'Сохранение цветов...');
-            console.log('📊 Loading colors...');
-            
-            // Шаг 6: Загрузка деталей (выполняется в saveLCXData)
-            if (progressCallback) progressCallback(6, 50, 'Сохранение деталей...');
+            // Шаги 5-8: Сохранение данных (выполняется в saveLCXData)
             console.log('📊 Saving data to IndexedDB...');
             await this.saveLCXData(transformedData, progressCallback);
-            
-            // Шаг 7: Создание индексов
-            if (progressCallback) progressCallback(7, 100, 'Построение индексов...');
-            console.log('📊 Creating indexes...');
             
             // Шаг 8: Завершение
             if (progressCallback) progressCallback(8, 50, 'Сохранение метаданных...');
