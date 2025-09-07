@@ -116,12 +116,16 @@ $RECYCLE.BIN/
 # Archive files
 *.7z
 *.dmg
-*.gz
 *.iso
 *.jar
 *.rar
 *.tar
 *.zip
+
+# GZ files (except LCX catalogs)
+*.gz
+!**/catalog*.gz
+!**/*catalog*.gz
 
 # Firebase
 .firebase/
