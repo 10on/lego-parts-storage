@@ -234,6 +234,8 @@
 
 .step-progress {
     margin-left: 2rem;
+    width: 100%;
+    max-width: 400px;
 }
 
 .step-progress .progress-bar-bg {
@@ -245,7 +247,14 @@
     font-size: 0.75rem;
     color: var(--text-muted);
     font-style: italic;
-    min-height: 1rem;
+    height: 1.2rem;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
 }
 
 .progress-step.error .progress-details {

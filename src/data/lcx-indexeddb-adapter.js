@@ -119,7 +119,7 @@ class LCXIndexedDBAdapter {
             });
             await this.setMetadata('lcxMetadata', transformedData.metadata);
 
-            if (progressCallback) progressCallback(7, 100, 'Загрузка завершена!');
+            if (progressCallback) progressCallback(8, 100, 'Загрузка завершена!');
             
             const stats = this.lcxParser.getStats(transformedData);
             console.log('✅ LCX data loaded to IndexedDB:', stats);
@@ -146,28 +146,28 @@ class LCXIndexedDBAdapter {
                 this.clearStore('partColors')
             ]);
 
-            // Шаг 3: Сохраняем категории
-            if (progressCallback) progressCallback(3, 0, `Сохранение ${transformedData.categories.length} категорий...`);
+            // Шаг 4: Сохраняем категории
+            if (progressCallback) progressCallback(4, 0, `Категории: подготовка к сохранению ${transformedData.categories.length} записей...`);
             await this.saveBulkDataWithProgress('categories', transformedData.categories, progressCallback);
             console.log(`📦 Saved ${transformedData.categories.length} categories`);
 
-            // Шаг 4: Сохраняем цвета
-            if (progressCallback) progressCallback(4, 0, `Сохранение ${transformedData.colors.length} цветов...`);
+            // Шаг 5: Сохраняем цвета
+            if (progressCallback) progressCallback(5, 0, `Цвета: подготовка к сохранению ${transformedData.colors.length} записей...`);
             await this.saveBulkDataWithProgress('colors', transformedData.colors, progressCallback);
             console.log(`🎨 Saved ${transformedData.colors.length} colors`);
 
-            // Шаг 5: Сохраняем детали (самый большой массив)
-            if (progressCallback) progressCallback(5, 0, `Сохранение ${transformedData.parts.length} деталей...`);
+            // Шаг 6: Сохраняем детали (самый большой массив)
+            if (progressCallback) progressCallback(6, 0, `Детали: подготовка к сохранению ${transformedData.parts.length} записей...`);
             await this.saveBulkDataWithProgress('parts', transformedData.parts, progressCallback);
             console.log(`🧱 Saved ${transformedData.parts.length} parts`);
 
-            // Шаг 6: Сохраняем связи деталь-цвет (если есть)
+            // Шаг 7: Сохраняем связи деталь-цвет (если есть)
             if (transformedData.partColors && transformedData.partColors.length > 0) {
-                if (progressCallback) progressCallback(6, 0, `Сохранение ${transformedData.partColors.length} связей...`);
+                if (progressCallback) progressCallback(7, 0, `Связи деталь-цвет: подготовка к сохранению ${transformedData.partColors.length} записей...`);
                 await this.saveBulkDataWithProgress('partColors', transformedData.partColors, progressCallback);
                 console.log(`🔗 Saved ${transformedData.partColors.length} part-color relations`);
             } else {
-                if (progressCallback) progressCallback(6, 0, 'Связи деталь-цвет отсутствуют');
+                if (progressCallback) progressCallback(7, 0, 'Связи деталь-цвет отсутствуют');
             }
 
             console.log('✅ All LCX data saved to IndexedDB');
@@ -235,9 +235,10 @@ class LCXIndexedDBAdapter {
             const progress = Math.min(100, Math.round((processedItems / totalItems) * 100));
             if (progressCallback) {
                 const stepNumber = this.getStepNumberForStore(storeName);
+                const dataTypeName = this.getDataTypeName(storeName);
                 // Исправляем передачу параметров: step, percent, message
                 console.log(`📊 Progress callback: Step ${stepNumber}, Progress ${progress}%, Store: ${storeName}, Processed: ${processedItems}/${totalItems}`);
-                progressCallback(stepNumber, progress, `Сохранено ${processedItems} из ${totalItems} записей`);
+                progressCallback(stepNumber, progress, `${dataTypeName}: сохранено ${processedItems} из ${totalItems} записей`);
             }
             
             // Даем браузеру время на обновление UI каждые 2 батча
@@ -252,12 +253,25 @@ class LCXIndexedDBAdapter {
      */
     getStepNumberForStore(storeName) {
         const stepMap = {
-            'categories': 3,
-            'colors': 4,
-            'parts': 5,
-            'partColors': 6
+            'categories': 4,
+            'colors': 5,
+            'parts': 6,
+            'partColors': 7
         };
-        return stepMap[storeName] || 3;
+        return stepMap[storeName] || 4;
+    }
+
+    /**
+     * Получает название типа данных для отображения
+     */
+    getDataTypeName(storeName) {
+        const typeMap = {
+            'categories': 'Категории',
+            'colors': 'Цвета',
+            'parts': 'Детали',
+            'partColors': 'Связи деталь-цвет'
+        };
+        return typeMap[storeName] || 'Данные';
     }
 
     /**
