@@ -614,34 +614,34 @@ class LCXIndexedDBAdapter {
         try {
             console.log('📁 Loading LCX file: data/bricklink-catalog.lcx.json.gz');
             
-            // Шаг 1: Чанковое скачивание файла данных
-            if (progressCallback) progressCallback(1, 5, 'Чтение локального архива...');
+            // Шаг 1: Скачивание файла БД
+            if (progressCallback) progressCallback(1, 5, 'Скачивание файла БД...');
             const response = await fetch('data/bricklink-catalog.lcx.json.gz');
             if (!response.ok) {
                 throw new Error(`Failed to fetch LCX file: ${response.status}`);
             }
             
-            if (progressCallback) progressCallback(1, 10, 'Получение размера архива...');
+            if (progressCallback) progressCallback(1, 10, 'Получение размера файла...');
             const contentLength = response.headers.get('content-length');
             const totalSize = contentLength ? parseInt(contentLength) : 0;
             
-            if (progressCallback) progressCallback(1, 15, `Размер архива: ${Math.round(totalSize / 1024)} KB`);
+            if (progressCallback) progressCallback(1, 15, `Размер файла: ${Math.round(totalSize / 1024)} KB`);
             
             // Чанковое скачивание
             const compressedData = await this.downloadInChunks(response, progressCallback);
-            if (progressCallback) progressCallback(1, 100, 'Архив прочитан');
+            if (progressCallback) progressCallback(1, 100, 'Файл БД скачан');
             
-            // Шаг 2: Чанковая распаковка архива
-            if (progressCallback) progressCallback(2, 5, 'Инициализация распаковки...');
+            // Шаг 2: Распаковка
+            if (progressCallback) progressCallback(2, 5, 'Распаковка...');
             const decompressedData = await this.decompressGzipWithProgress(compressedData, progressCallback);
-            if (progressCallback) progressCallback(2, 100, 'Архив распакован');
+            if (progressCallback) progressCallback(2, 100, 'Распаковка завершена');
             
-            // Шаг 3: Парсинг JSON данных
-            if (progressCallback) progressCallback(3, 20, 'Начало парсинга JSON...');
+            // Шаг 3: Обработка данных
+            if (progressCallback) progressCallback(3, 20, 'Обработка данных...');
             const lcxData = JSON.parse(decompressedData);
-            if (progressCallback) progressCallback(3, 50, 'JSON распарсен');
-            if (progressCallback) progressCallback(3, 80, 'Валидация структуры...');
-            if (progressCallback) progressCallback(3, 100, 'Данные обработаны');
+            if (progressCallback) progressCallback(3, 50, 'Данные обработаны');
+            if (progressCallback) progressCallback(3, 80, 'Подготовка к сохранению...');
+            if (progressCallback) progressCallback(3, 100, 'Обработка завершена');
             
             // Загружаем данные в IndexedDB (шаги 4-8)
             await this.loadFromLCXData(lcxData, progressCallback);
@@ -681,7 +681,7 @@ class LCXIndexedDBAdapter {
                     if (currentProgress >= progressStep) {
                         if (progressCallback) {
                             progressCallback(1, currentProgress, 
-                                `Прочитано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
+                                `Скачано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
                         }
                         progressStep += progressIncrement;
                     }
@@ -690,7 +690,7 @@ class LCXIndexedDBAdapter {
                     if (receivedLength % (50 * 1024) < value.length) {
                         if (progressCallback) {
                             progressCallback(1, Math.min(95, 20 + (receivedLength / 1024) * 0.1), 
-                                `Прочитано: ${Math.round(receivedLength / 1024)} KB`);
+                                `Скачано: ${Math.round(receivedLength / 1024)} KB`);
                         }
                     }
                 }
