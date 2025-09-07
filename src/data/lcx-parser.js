@@ -262,13 +262,26 @@ class LCXParser {
     }
 
     /**
-     * Пост-обработка связей деталь-цвет
+     * Пост-обработка связей деталь-цвет согласно SPEC-PART-COLOR-MAP_v2.md
      */
     postProcessPartColors(partColors) {
         partColors.forEach(partColor => {
+            // partId: trim(), непустая строка, без смены регистра
             partColor.partId = String(partColor.partId || '').trim();
+            
+            // colorId: целое >= 0
             partColor.colorId = parseInt(partColor.colorId);
-            partColor.hasImg = Boolean(partColor.hasImg);
+            if (isNaN(partColor.colorId) || partColor.colorId < 0) {
+                console.warn(`Некорректный colorId: ${partColor.colorId} для детали ${partColor.partId}`);
+                partColor.colorId = 0; // Fallback
+            }
+            
+            // hasImg: может быть true, false или null
+            if (partColor.hasImg === null || partColor.hasImg === undefined) {
+                partColor.hasImg = null;
+            } else {
+                partColor.hasImg = Boolean(partColor.hasImg);
+            }
         });
     }
 

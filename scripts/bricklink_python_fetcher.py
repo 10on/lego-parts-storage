@@ -15,9 +15,18 @@ class BrickLinkFetcher:
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
             'Content-Type': 'application/x-www-form-urlencoded',
             'Origin': 'https://www.bricklink.com',
             'Referer': 'https://www.bricklink.com/catalogDownload.asp',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
+            'Priority': 'u=0, i',
+            'TE': 'trailers'
         }
         
         # Создаем сессию
@@ -34,39 +43,66 @@ class BrickLinkFetcher:
             except Exception as e:
                 print(f"⚠️ Не удалось загрузить cookies из Firefox: {e}")
         
-        # Типы данных для скачивания (согласно HTML форме)
+        # Добавляем дополнительные cookies для Part & Color Codes
+        self.add_additional_cookies()
+        
+        # Типы данных для скачивания (согласно SPEC-PART-COLOR-MAP_v2.md)
         self.data_types = {
-            'item_types': {
-                'viewType': '1',
+            # ОБЯЗАТЕЛЬНЫЕ данные
+            'part_color_codes': {
+                'viewType': '5',
                 'itemType': 'S',
-                'filename': 'item_types.tab',
-                'description': 'Типы элементов'
+                'filename': 'part_color_codes.tab',
+                'description': 'Part & Color Codes (ОБЯЗАТЕЛЬНО)',
+                'required': True
             },
-            'categories': {
-                'viewType': '2',
-                'itemType': 'S',
-                'filename': 'categories.tab',
-                'description': 'Категории'
-            },
+            # РЕКОМЕНДУЕМЫЕ данные
             'colors': {
                 'viewType': '3',
                 'itemType': 'S',
                 'filename': 'colors.tab',
-                'description': 'Цвета'
+                'description': 'Colors (РЕКОМЕНДУЕМО)',
+                'required': False
             },
             'parts': {
                 'viewType': '0',
                 'itemType': 'P',
                 'filename': 'parts.tab',
-                'description': 'Детали (Parts)'
+                'description': 'Items (Parts) (РЕКОМЕНДУЕМО)',
+                'required': False
             },
-            'part_color_codes': {
-                'viewType': '5',
+            # ДОПОЛНИТЕЛЬНЫЕ данные
+            'categories': {
+                'viewType': '2',
                 'itemType': 'S',
-                'filename': 'part_color_codes.tab',
-                'description': 'Коды деталей и цветов'
+                'filename': 'categories.tab',
+                'description': 'Categories (ОПЦИОНАЛЬНО)',
+                'required': False
+            },
+            'item_types': {
+                'viewType': '1',
+                'itemType': 'S',
+                'filename': 'item_types.tab',
+                'description': 'Item Types (ОПЦИОНАЛЬНО)',
+                'required': False
             }
         }
+    
+    def add_additional_cookies(self):
+        """Добавляет дополнительные cookies для доступа к Part & Color Codes"""
+        # Ключевые cookies для доступа к Part & Color Codes
+        additional_cookies = {
+            'BLNEWSESSIONID': 'V10FCD61F816536E8DD4FA7B0E6C3AEB2C6103B74148ACAEE752AC3986C61B2E9019EEC80CFFB53A74431BDF0296F8CF6D1',
+            'BLHASTOKEN': '1',
+            'blckSessionStarted': '1',
+            'blCartBuyerID': '-1122976209',
+            'catalogView': 'cView=1^&invView=1'
+        }
+        
+        for name, value in additional_cookies.items():
+            self.session.cookies.set(name, value, domain='.bricklink.com')
+        
+        print("✅ Добавлены дополнительные cookies для Part & Color Codes")
     
     def fetch_data(self, data_type, output_dir='bricklink_data'):
         """Скачивает данные определенного типа"""
@@ -85,6 +121,17 @@ class BrickLinkFetcher:
             'downloadType': 'T'
         }
         
+        # Специальная обработка для Part & Color Codes
+        if data_type == 'part_color_codes':
+            # Используем правильные параметры для Part & Color Codes
+            data = {
+                'itemType': 'S',
+                'viewType': '5',
+                'itemTypeInv': 'S',
+                'itemNo': '',
+                'downloadType': 'T'
+            }
+        
         print(f"📥 Скачиваю {config['description']}...")
         
         try:
@@ -94,6 +141,16 @@ class BrickLinkFetcher:
                 timeout=30
             )
             response.raise_for_status()
+            
+            # Проверяем, что получили TSV данные, а не HTML
+            content_type = response.headers.get('content-type', '').lower()
+            content_text = response.text[:200]  # Первые 200 символов для проверки
+            
+            if 'text/html' in content_type or content_text.strip().startswith('<!doctype html>'):
+                print(f"⚠️  Получен HTML вместо TSV данных для {config['description']}")
+                print(f"   Content-Type: {content_type}")
+                print(f"   Начало ответа: {content_text[:100]}...")
+                return False
             
             # Создаем папку если не существует
             Path(output_dir).mkdir(exist_ok=True)
@@ -112,29 +169,56 @@ class BrickLinkFetcher:
             return False
     
     def fetch_all(self, output_dir='bricklink_data'):
-        """Скачивает все типы данных"""
-        print("🚀 BrickLink Data Fetcher")
-        print("=" * 40)
+        """Скачивает все типы данных с приоритизацией обязательных"""
+        print("🚀 BrickLink Data Fetcher (SPEC v2)")
+        print("=" * 50)
+        
+        # Разделяем типы данных по приоритету
+        required_types = [k for k, v in self.data_types.items() if v.get('required', False)]
+        recommended_types = [k for k, v in self.data_types.items() if not v.get('required', False)]
         
         success_count = 0
         total_count = len(self.data_types)
         
-        for data_type in self.data_types.keys():
+        # Сначала скачиваем обязательные данные
+        print("📥 Скачивание ОБЯЗАТЕЛЬНЫХ данных:")
+        for data_type in required_types:
             if self.fetch_data(data_type, output_dir):
                 success_count += 1
-            print()  # Пустая строка для разделения
+            print()
         
-        print("=" * 40)
+        # Затем рекомендуемые
+        print("📥 Скачивание РЕКОМЕНДУЕМЫХ данных:")
+        for data_type in recommended_types:
+            if self.fetch_data(data_type, output_dir):
+                success_count += 1
+            print()
+        
+        print("=" * 50)
         print(f"✅ Готово! {success_count}/{total_count} файлов успешно скачано")
         
-        # Показываем информацию о файлах
+        # Проверяем наличие обязательных файлов
         output_path = Path(output_dir)
+        missing_required = []
+        for data_type in required_types:
+            filename = self.data_types[data_type]['filename']
+            if not (output_path / filename).exists():
+                missing_required.append(filename)
+        
+        if missing_required:
+            print(f"⚠️  ВНИМАНИЕ: Отсутствуют обязательные файлы: {', '.join(missing_required)}")
+            print("   Без этих файлов невозможно построить карту допустимых цветов!")
+        else:
+            print("✅ Все обязательные файлы успешно скачаны")
+        
+        # Показываем информацию о файлах
         if output_path.exists():
             print(f"\n📁 Файлы сохранены в: {output_path.absolute()}")
             print("\n📋 Список файлов:")
             for file in sorted(output_path.glob("*.tab")):
                 size = file.stat().st_size
-                print(f"   {file.name:<25} {size:>10,} bytes")
+                status = "✅" if file.name not in missing_required else "❌"
+                print(f"   {status} {file.name:<25} {size:>10,} bytes")
 
 
 def main():

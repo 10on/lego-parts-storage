@@ -77,6 +77,8 @@ class LCXIndexedDBAdapter {
                     partColorsStore.createIndex('partId', 'partId', { unique: false });
                     partColorsStore.createIndex('colorId', 'colorId', { unique: false });
                     partColorsStore.createIndex('hasImg', 'hasImg', { unique: false });
+                    // Составной индекс для быстрого поиска по детали и наличию изображения
+                    partColorsStore.createIndex('partId_hasImg', ['partId', 'hasImg'], { unique: false });
                 }
 
                 // Создаем/обновляем хранилище для метаданных
@@ -884,6 +886,141 @@ class LCXIndexedDBAdapter {
         return new Promise((resolve) => {
             const request = store.get(key);
             request.onsuccess = () => resolve(request.result);
+        });
+    }
+
+    // Методы для работы с partColors согласно SPEC-PART-COLOR-MAP_v2.md
+    
+    /**
+     * Получает все доступные цвета для детали
+     * @param {string} partId - ID детали
+     * @returns {Promise<Array>} Массив объектов {colorId, hasImg}
+     */
+    async getPartColors(partId) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors'], 'readonly');
+        const store = transaction.objectStore('partColors');
+        const index = store.index('partId');
+        
+        return new Promise((resolve, reject) => {
+            const request = index.getAll(partId);
+            request.onsuccess = () => {
+                const results = request.result.map(item => ({
+                    colorId: item.colorId,
+                    hasImg: item.hasImg
+                }));
+                // Сортируем по colorId для стабильности
+                results.sort((a, b) => a.colorId - b.colorId);
+                resolve(results);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+    
+    /**
+     * Получает все детали для цвета
+     * @param {number} colorId - ID цвета
+     * @returns {Promise<Array>} Массив partId
+     */
+    async getColorParts(colorId) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors'], 'readonly');
+        const store = transaction.objectStore('partColors');
+        const index = store.index('colorId');
+        
+        return new Promise((resolve, reject) => {
+            const request = index.getAll(colorId);
+            request.onsuccess = () => {
+                const results = request.result.map(item => item.partId);
+                // Сортируем лексикографически для стабильности
+                results.sort();
+                resolve(results);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+    
+    /**
+     * Проверяет, доступен ли цвет для детали
+     * @param {string} partId - ID детали
+     * @param {number} colorId - ID цвета
+     * @returns {Promise<boolean>} true если цвет доступен
+     */
+    async isColorAvailableForPart(partId, colorId) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors'], 'readonly');
+        const store = transaction.objectStore('partColors');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.get([partId, colorId]);
+            request.onsuccess = () => resolve(!!request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+    
+    /**
+     * Получает детали с изображениями для определенного цвета
+     * @param {number} colorId - ID цвета
+     * @returns {Promise<Array>} Массив partId с изображениями
+     */
+    async getColorPartsWithImages(colorId) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors'], 'readonly');
+        const store = transaction.objectStore('partColors');
+        const index = store.index('colorId');
+        
+        return new Promise((resolve, reject) => {
+            const request = index.getAll(colorId);
+            request.onsuccess = () => {
+                const results = request.result
+                    .filter(item => item.hasImg === true)
+                    .map(item => item.partId);
+                results.sort();
+                resolve(results);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+    
+    /**
+     * Получает статистику по partColors
+     * @returns {Promise<Object>} Статистика
+     */
+    async getPartColorsStats() {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors'], 'readonly');
+        const store = transaction.objectStore('partColors');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const data = request.result;
+                const stats = {
+                    totalLinks: data.length,
+                    uniqueParts: new Set(data.map(item => item.partId)).size,
+                    uniqueColors: new Set(data.map(item => item.colorId)).size,
+                    withImages: data.filter(item => item.hasImg === true).length,
+                    withoutImages: data.filter(item => item.hasImg === false).length,
+                    nullImages: data.filter(item => item.hasImg === null).length
+                };
+                resolve(stats);
+            };
+            request.onerror = () => reject(request.error);
         });
     }
 

@@ -133,3 +133,4 @@ firebase-debug.*.log
 
 # Aider AI assistant files
 .aider.*
+scripts/bricklink_data/
