@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
 """
-TSV to LCX Converter
-Конвертер TSV данных BrickLink в LCX-Tabular формат согласно SPEC-PART-COLOR-MAP_v2.md
+TSV to LCX Converter (SPEC v2)
+Конвертирует данные BrickLink из TSV в формат LCX-Tabular JSON
 """
 
 import csv
 import json
 import gzip
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-import argparse
-import sys
+from typing import Dict, List, Any, Optional
+
 
 class TSVToLCXConverter:
+    """Конвертер TSV файлов BrickLink в формат LCX-Tabular JSON"""
+    
     def __init__(self):
-        self.schema_version = 1
-        self.source = "BrickLink"
-        self.version = "2024.1"
-        
         # Маппинг заголовков согласно спецификации
         self.header_mappings = {
             'part_color_codes': {
                 'partId': ['Number', 'Item No', 'ItemNo', 'Part No', 'Part Number'],
-                'colorId': ['Color ID', 'ColorID', 'Color Code'],
-                'hasImg': ['Has Image', 'HasImage', 'Image', 'Img']
+                'colorName': ['Color ID', 'ColorID', 'Color Code', 'Color']
             },
             'colors': {
                 'id': ['Color ID', 'ColorID'],
@@ -34,21 +30,12 @@ class TSVToLCXConverter:
                 'blId': ['Number', 'Item No', 'ItemNo'],
                 'name': ['Name'],
                 'catId': ['Category ID']
+            },
+            'categories': {
+                'id': ['Category ID'],
+                'name': ['Category Name']
             }
         }
-    
-    def normalize_has_img(self, value: str) -> Optional[bool]:
-        """Нормализует значение hasImg согласно спецификации"""
-        if not value or value.strip() == '':
-            return None
-        
-        value = value.strip().lower()
-        if value in ['1', 'true', 'yes', 'y']:
-            return True
-        elif value in ['0', 'false', 'no', 'n']:
-            return False
-        else:
-            return None
     
     def normalize_rgb(self, value: str) -> Optional[str]:
         """Нормализует RGB значение в HEX6 UPPERCASE без #"""
@@ -56,25 +43,21 @@ class TSVToLCXConverter:
             return None
         
         value = value.strip().upper()
-        # Убираем # если есть
         if value.startswith('#'):
             value = value[1:]
         
-        # Проверяем формат HEX6
+        # Проверяем, что это валидный HEX
         if len(value) == 6 and all(c in '0123456789ABCDEF' for c in value):
             return value
         else:
             return None
     
     def find_column_index(self, headers: List[str], possible_names: List[str]) -> Optional[int]:
-        """Находит индекс колонки по возможным названиям (case-insensitive)"""
-        headers_lower = [h.strip().lower() for h in headers]
-        possible_names_lower = [name.strip().lower() for name in possible_names]
-        
-        for i, header in enumerate(headers_lower):
-            if header in possible_names_lower:
-                return i
-        
+        """Находит индекс колонки по возможным названиям"""
+        for i, header in enumerate(headers):
+            for name in possible_names:
+                if header.lower() == name.lower():
+                    return i
         return None
     
     def parse_tsv_file(self, file_path: Path, data_type: str) -> List[Dict[str, Any]]:
@@ -96,14 +79,18 @@ class TSVToLCXConverter:
             
             # Находим индексы нужных колонок
             column_indices = {}
+            print(f"🔍 Поиск колонок в {file_path.name}:")
+            print(f"   Заголовки: {headers}")
+            print(f"   Маппинг: {mapping}")
+            
             for field, possible_names in mapping.items():
                 idx = self.find_column_index(headers, possible_names)
                 if idx is not None:
                     column_indices[field] = idx
+                    print(f"   ✅ {field}: колонка {idx} ('{headers[idx]}')")
                 else:
-                    print(f"⚠️  Колонка для поля '{field}' не найдена в {file_path.name}")
-                    print(f"   Ожидаемые названия: {possible_names}")
-                    print(f"   Найденные заголовки: {headers}")
+                    print(f"   ❌ {field}: не найдена")
+                    print(f"      Ожидаемые названия: {possible_names}")
             
             # Читаем данные
             reader = csv.reader(f, delimiter='\t')
@@ -117,9 +104,7 @@ class TSVToLCXConverter:
                         value = row[idx].strip()
                         
                         # Применяем специфичную нормализацию
-                        if field == 'hasImg':
-                            obj[field] = self.normalize_has_img(value)
-                        elif field == 'rgb':
+                        if field == 'rgb':
                             obj[field] = self.normalize_rgb(value)
                         elif field in ['id', 'colorId', 'catId']:
                             try:
@@ -133,7 +118,7 @@ class TSVToLCXConverter:
                 
                 # Валидация обязательных полей
                 if data_type == 'part_color_codes':
-                    if not obj.get('partId') or obj.get('colorId') is None:
+                    if not obj.get('partId') or not obj.get('colorName'):
                         print(f"⚠️  Строка {row_num}: пропущена (отсутствуют обязательные поля)")
                         continue
                 elif data_type == 'colors':
@@ -142,6 +127,10 @@ class TSVToLCXConverter:
                         continue
                 elif data_type == 'parts':
                     if not obj.get('blId') or not obj.get('name') or obj.get('catId') is None:
+                        print(f"⚠️  Строка {row_num}: пропущена (отсутствуют обязательные поля)")
+                        continue
+                elif data_type == 'categories':
+                    if obj.get('id') is None or not obj.get('name'):
                         print(f"⚠️  Строка {row_num}: пропущена (отсутствуют обязательные поля)")
                         continue
                 
@@ -162,22 +151,14 @@ class TSVToLCXConverter:
                 groups[key] = []
             groups[key].append(item)
         
-        # Агрегируем hasImg по правилу "есть хотя бы одно true"
+        # Дедупликация без hasImg
         deduplicated = []
         for key, items in groups.items():
             part_id, color_id = key
             
-            # Агрегируем hasImg
-            has_img_values = [item['hasImg'] for item in items if item['hasImg'] is not None]
-            if has_img_values:
-                has_img_agg = any(has_img_values)  # True если есть хотя бы одно true
-            else:
-                has_img_agg = None  # Если не было ни одного явного значения
-            
             deduplicated.append({
                 'partId': part_id,
-                'colorId': color_id,
-                'hasImg': has_img_agg
+                'colorId': color_id
             })
         
         print(f"✅ Дедупликация завершена: {len(part_colors)} → {len(deduplicated)} связей")
@@ -204,11 +185,7 @@ class TSVToLCXConverter:
         unknown_parts = [item for item in part_colors if item['partId'] not in part_ids]
         unknown_parts_pct = (len(unknown_parts) / total_links * 100) if total_links > 0 else 0
         
-        # Статистика по hasImg
-        has_img_true = len([item for item in part_colors if item['hasImg'] is True])
-        has_img_null = len([item for item in part_colors if item['hasImg'] is None])
-        has_img_true_pct = (has_img_true / total_links * 100) if total_links > 0 else 0
-        has_img_null_pct = (has_img_null / total_links * 100) if total_links > 0 else 0
+        # Статистика (без hasImg)
         
         metrics = {
             'links_total': total_links,
@@ -218,10 +195,6 @@ class TSVToLCXConverter:
             'unknown_colors_pct': round(unknown_colors_pct, 2),
             'unknown_parts_count': len(unknown_parts),
             'unknown_parts_pct': round(unknown_parts_pct, 2),
-            'has_img_true_count': has_img_true,
-            'has_img_true_pct': round(has_img_true_pct, 2),
-            'has_img_null_count': has_img_null,
-            'has_img_null_pct': round(has_img_null_pct, 2)
         }
         
         print("📊 Метрики качества:")
@@ -230,8 +203,6 @@ class TSVToLCXConverter:
         print(f"   Уникальных цветов: {metrics['colors_total']:,}")
         print(f"   Неизвестных цветов: {metrics['unknown_colors_count']:,} ({metrics['unknown_colors_pct']}%)")
         print(f"   Неизвестных деталей: {metrics['unknown_parts_count']:,} ({metrics['unknown_parts_pct']}%)")
-        print(f"   hasImg=true: {metrics['has_img_true_count']:,} ({metrics['has_img_true_pct']}%)")
-        print(f"   hasImg=null: {metrics['has_img_null_count']:,} ({metrics['has_img_null_pct']}%)")
         
         return metrics
     
@@ -239,32 +210,35 @@ class TSVToLCXConverter:
         """Создает LCX структуру данных"""
         print("🏗️  Создание LCX структуры...")
         
+        lcx_data = {
+            'version': '1.0',
+            'tables': {}
+        }
+        
         # Сортируем данные для стабильности
         part_colors_sorted = sorted(part_colors, key=lambda x: (x['partId'], x['colorId']))
         colors_sorted = sorted(colors, key=lambda x: x['id'])
         parts_sorted = sorted(parts, key=lambda x: x['blId'])
         
-        lcx_data = {
-            'schemaVersion': self.schema_version,
-            'source': self.source,
-            'version': self.version,
-            'tables': {
-                'partColors': {
-                    'cols': ['partId', 'colorId', 'hasImg'],
-                    'rows': [[item['partId'], item['colorId'], item['hasImg']] for item in part_colors_sorted]
-                },
-                'colors': {
-                    'cols': ['id', 'name', 'rgb'],
-                    'rows': [[item['id'], item['name'], item['rgb']] for item in colors_sorted]
-                },
-                'parts': {
-                    'cols': ['blId', 'name', 'catId'],
-                    'rows': [[item['blId'], item['name'], item['catId']] for item in parts_sorted]
-                }
+        # Добавляем таблицы
+        if part_colors:
+            lcx_data['tables']['partColors'] = {
+                'cols': ['partId', 'colorId'],
+                'rows': [[item['partId'], item['colorId']] for item in part_colors_sorted]
             }
-        }
         
-        # Добавляем категории если есть
+        if colors:
+            lcx_data['tables']['colors'] = {
+                'cols': ['id', 'name', 'rgb'],
+                'rows': [[item['id'], item['name'], item['rgb']] for item in colors_sorted]
+            }
+        
+        if parts:
+            lcx_data['tables']['parts'] = {
+                'cols': ['blId', 'name', 'catId'],
+                'rows': [[item['blId'], item['name'], item['catId']] for item in parts_sorted]
+            }
+        
         if categories:
             categories_sorted = sorted(categories, key=lambda x: x['id'])
             lcx_data['tables']['categories'] = {
@@ -294,13 +268,39 @@ class TSVToLCXConverter:
         if missing_required:
             raise FileNotFoundError(f"Отсутствуют обязательные файлы: {missing_required}")
         
-        # Парсим данные
-        part_colors = self.parse_tsv_file(required_files['part_color_codes'], 'part_color_codes')
-        
+        # Сначала парсим цвета для маппинга
         colors = []
+        color_name_to_id = {}
         if optional_files['colors'].exists():
             colors = self.parse_tsv_file(optional_files['colors'], 'colors')
+            # Создаем маппинг названий цветов к ID
+            for color in colors:
+                if color.get('name') and color.get('id') is not None:
+                    color_name_to_id[color['name'].lower()] = color['id']
         
+        # Парсим Part & Color Codes
+        part_colors_raw = self.parse_tsv_file(required_files['part_color_codes'], 'part_color_codes')
+        
+        # Конвертируем названия цветов в ID
+        part_colors = []
+        for item in part_colors_raw:
+            if item.get('colorName'):
+                # Это название цвета, нужно найти ID
+                color_name = item['colorName'].lower()
+                if color_name in color_name_to_id:
+                    item['colorId'] = color_name_to_id[color_name]
+                    del item['colorName']  # Удаляем colorName, оставляем только colorId
+                    part_colors.append(item)
+                else:
+                    print(f"⚠️  Неизвестный цвет: {item['colorName']} для детали {item['partId']}")
+            else:
+                # Нет названия цвета
+                continue
+        
+        # Дедупликация
+        part_colors = self.deduplicate_part_colors(part_colors)
+        
+        # Парсим остальные файлы
         parts = []
         if optional_files['parts'].exists():
             parts = self.parse_tsv_file(optional_files['parts'], 'parts')
@@ -309,9 +309,6 @@ class TSVToLCXConverter:
         if optional_files['categories'].exists():
             categories = self.parse_tsv_file(optional_files['categories'], 'categories')
         
-        # Дедупликация
-        part_colors = self.deduplicate_part_colors(part_colors)
-        
         # Валидация
         metrics = self.validate_data(part_colors, colors, parts)
         
@@ -319,48 +316,35 @@ class TSVToLCXConverter:
         lcx_data = self.create_lcx_structure(part_colors, colors, parts, categories)
         
         # Сохранение
-        print(f"💾 Сохранение в {output_file}...")
+        print(f"💾 Сохранение в {output_file}")
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        json_str = json.dumps(lcx_data, ensure_ascii=False, separators=(',', ':'))
         
         if compress:
             with gzip.open(output_file, 'wt', encoding='utf-8') as f:
-                f.write(json_str)
-            print(f"✅ Сжатый LCX файл сохранен: {output_file}")
+                json.dump(lcx_data, f, ensure_ascii=False, separators=(',', ':'))
         else:
             with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(json_str)
-            print(f"✅ LCX файл сохранен: {output_file}")
+                json.dump(lcx_data, f, ensure_ascii=False, indent=2)
         
-        # Добавляем метрики в результат
-        lcx_data['metrics'] = metrics
-        
+        print("✅ Конвертация завершена!")
         return lcx_data
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Конвертер TSV данных BrickLink в LCX формат')
-    parser.add_argument('input_dir', type=Path, help='Папка с TSV файлами BrickLink')
-    parser.add_argument('-o', '--output', type=Path, default=Path('bricklink-catalog.lcx.json.gz'), 
-                       help='Выходной LCX файл (по умолчанию: bricklink-catalog.lcx.json.gz)')
+    """Главная функция"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='TSV to LCX Converter (SPEC v2)')
+    parser.add_argument('input_dir', type=Path, help='Директория с TSV файлами')
+    parser.add_argument('-o', '--output', type=Path, default=Path('bricklink-catalog.lcx.json.gz'),
+                       help='Выходной файл (по умолчанию: bricklink-catalog.lcx.json.gz)')
     parser.add_argument('--no-compress', action='store_true', help='Не сжимать выходной файл')
     
     args = parser.parse_args()
     
-    try:
-        converter = TSVToLCXConverter()
-        result = converter.convert(args.input_dir, args.output, not args.no_compress)
-        
-        print("\n🎉 Конвертация завершена успешно!")
-        print(f"📊 Итоговые метрики:")
-        for key, value in result['metrics'].items():
-            print(f"   {key}: {value}")
-            
-    except Exception as e:
-        print(f"❌ Ошибка конвертации: {e}")
-        sys.exit(1)
+    converter = TSVToLCXConverter()
+    converter.convert(args.input_dir, args.output, compress=not args.no_compress)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
