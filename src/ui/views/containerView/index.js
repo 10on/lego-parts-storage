@@ -88,6 +88,9 @@ class ContainerView {
         if (cellData) {
             cell.innerHTML = this.renderCellContent(cellData);
             
+            // Обрабатываем fallback изображения
+            this.handleCellImageFallbacks(cell);
+            
             // Добавляем класс для объединенных ячеек
             if (cellData.type === 'merged') {
                 cell.classList.add('merged');
@@ -174,7 +177,7 @@ class ContainerView {
     renderSinglePart(partData) {
             return `
                 <div class="cell-content">
-                ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'">` : ''}
+                ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'" data-original-src="${partData.image}">` : ''}
                 </div>
             `;
         }
@@ -730,6 +733,9 @@ class ContainerView {
         // Обновляем отображение ячейки
         cell.innerHTML = this.renderCellContent(cellData);
         
+        // Обрабатываем fallback изображения
+        this.handleCellImageFallbacks(cell);
+        
         // Синхронизируем с основным приложением
         if (window.app) {
             const containerIndex = window.app.containers.findIndex(c => c.id === this.container.id);
@@ -767,6 +773,9 @@ class ContainerView {
         // Обновляем отображение ячейки
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.renderCellContent(updatedCellData);
+        
+        // Обрабатываем fallback изображения
+        this.handleCellImageFallbacks(cell);
 
         // Синхронизируем с основным приложением
         if (window.app) {
@@ -867,6 +876,10 @@ class ContainerView {
         // Обновляем отображение ячейки
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.renderCellContent(updatedCellData);
+        
+        // Обрабатываем fallback изображения
+        this.handleCellImageFallbacks(cell);
+        
         cell.classList.remove('empty', 'editing');
         cell.classList.add('filled');
 
@@ -1385,7 +1398,24 @@ class ContainerView {
     }
 
     async loadPartImage(imageElement, placeholderElement, imageUrl) {
-        console.log('Loading image:', imageUrl);
+        if (window.imageLoader) {
+            return window.imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
+                showFallbackIndicator: true,
+                fallbackIndicatorText: 'Fallback',
+                onSuccess: (url, isFallback) => {
+                    if (isFallback) {
+                        imageElement.classList.add('fallback-image');
+                    }
+                }
+            });
+        } else {
+            // Fallback к старому методу если ImageLoader недоступен
+            return this.loadPartImageLegacy(imageElement, placeholderElement, imageUrl);
+        }
+    }
+
+    async loadPartImageLegacy(imageElement, placeholderElement, imageUrl) {
+        console.log('Loading image (legacy):', imageUrl);
         return new Promise((resolve, reject) => {
             const img = new Image();
             
@@ -1397,42 +1427,9 @@ class ContainerView {
                 resolve();
             };
             
-            img.onerror = async (error) => {
+            img.onerror = (error) => {
                 console.warn('Image failed to load:', error, 'URL:', imageUrl);
-                
-                // Пытаемся загрузить fallback изображения
-                const fallbackUrls = this.getFallbackImageUrls(imageUrl);
-                let fallbackLoaded = false;
-                
-                for (const fallbackUrl of fallbackUrls) {
-                    try {
-                        const fallbackImg = new Image();
-                        const fallbackPromise = new Promise((resolveFallback, rejectFallback) => {
-                            fallbackImg.onload = () => {
-                                console.log('Fallback image loaded:', fallbackUrl);
-                                imageElement.src = fallbackUrl;
-                                imageElement.style.display = 'block';
-                                placeholderElement.style.display = 'none';
-                                fallbackLoaded = true;
-                                resolveFallback();
-                            };
-                            fallbackImg.onerror = () => rejectFallback();
-                        });
-                        
-                        fallbackImg.src = fallbackUrl;
-                        await fallbackPromise;
-                        break; // Если fallback загрузился, выходим из цикла
-                    } catch (fallbackError) {
-                        console.warn('Fallback image failed:', fallbackUrl);
-                        continue; // Пробуем следующий fallback
-                    }
-                }
-                
-                if (!fallbackLoaded) {
-                    // Если все fallback'и не сработали, показываем заглушку с информацией
-                    this.showImagePlaceholderWithError(imageElement, placeholderElement, 'Изображение недоступно');
-                }
-                
+                this.showImagePlaceholder(imageElement, placeholderElement);
                 resolve(); // Не reject'им, чтобы не ломать UI
             };
             
@@ -1488,6 +1485,31 @@ class ContainerView {
         }
         
         return fallbackUrls;
+    }
+
+    /**
+     * Обрабатывает fallback загрузку изображений в ячейке
+     * @param {HTMLElement} cell - DOM элемент ячейки
+     */
+    handleCellImageFallbacks(cell) {
+        if (!window.imageLoader) return;
+
+        const images = cell.querySelectorAll('img[data-original-src]');
+        images.forEach(img => {
+            const originalSrc = img.dataset.originalSrc;
+            if (originalSrc && img.src !== originalSrc) {
+                // Если изображение не загрузилось, пробуем fallback
+                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
+                    showFallbackIndicator: true,
+                    fallbackIndicatorText: 'Fallback',
+                    onSuccess: (url, isFallback) => {
+                        if (isFallback) {
+                            img.classList.add('fallback-image');
+                        }
+                    }
+                });
+            }
+        });
     }
 
     // === МЕТОДЫ ОБЪЕДИНЕНИЯ ЯЧЕЕК ===

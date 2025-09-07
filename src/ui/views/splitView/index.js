@@ -46,10 +46,37 @@ class SplitView {
 
         this.setupEventListeners();
         
+        // Обрабатываем fallback изображения
+        this.handleSplitImageFallbacks();
+        
         // Настройка клик-системы после рендеринга
         setTimeout(() => {
             this.setupClickSystem();
         }, 100);
+    }
+
+    /**
+     * Обрабатывает fallback загрузку изображений в split view
+     */
+    handleSplitImageFallbacks() {
+        if (!window.imageLoader) return;
+
+        const images = document.querySelectorAll('.cell-part-image[data-original-src]');
+        images.forEach(img => {
+            const originalSrc = img.dataset.originalSrc;
+            if (originalSrc && img.src !== originalSrc) {
+                // Если изображение не загрузилось, пробуем fallback
+                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
+                    showFallbackIndicator: true,
+                    fallbackIndicatorText: 'Fallback',
+                    onSuccess: (url, isFallback) => {
+                        if (isFallback) {
+                            img.classList.add('fallback-image');
+                        }
+                    }
+                });
+            }
+        });
     }
 
     renderContainerPreview(container, side) {
@@ -168,7 +195,7 @@ class SplitView {
             const item = items[0];
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name}"></div>`;
+                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name}" data-original-src="${imageUrl}"></div>`;
             } else {
                 const emoji = this.getPartEmoji(item);
                 return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${item.name}">${emoji}</div></div>`;
@@ -180,7 +207,7 @@ class SplitView {
             const position = this.getCornerPosition(index, items.length);
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
+                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})" data-original-src="${imageUrl}">`;
             } else {
                 const emoji = this.getPartEmoji(item);
                 return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;
@@ -195,7 +222,7 @@ class SplitView {
             const position = this.getCornerPosition(index, 3);
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})">`;
+                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})" data-original-src="${imageUrl}">`;
             } else {
                 const emoji = this.getPartEmoji(item);
                 return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;

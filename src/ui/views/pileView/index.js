@@ -15,9 +15,36 @@ class PileView {
         } else {
             const itemsHtml = await Promise.all(pileItems.map(item => this.renderPileItem(item)));
             container.innerHTML = itemsHtml.join('');
+            
+            // Обрабатываем fallback изображения
+            this.handlePileImageFallbacks();
         }
 
         this.setupEventListeners();
+    }
+
+    /**
+     * Обрабатывает fallback загрузку изображений в куче
+     */
+    handlePileImageFallbacks() {
+        if (!window.imageLoader) return;
+
+        const images = document.querySelectorAll('.pile-item-image[data-original-src]');
+        images.forEach(img => {
+            const originalSrc = img.dataset.originalSrc;
+            if (originalSrc && img.src !== originalSrc) {
+                // Если изображение не загрузилось, пробуем fallback
+                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
+                    showFallbackIndicator: true,
+                    fallbackIndicatorText: 'Fallback',
+                    onSuccess: (url, isFallback) => {
+                        if (isFallback) {
+                            img.classList.add('fallback-image');
+                        }
+                    }
+                });
+            }
+        });
     }
 
     renderEmptyState() {
@@ -38,7 +65,7 @@ class PileView {
         
         return `
             <div class="pile-item" data-item-id="${item.id}">
-                <img src="${item.image}" alt="${item.partId}" class="pile-item-image" onerror="this.style.display='none'">
+                <img src="${item.image}" alt="${item.partId}" class="pile-item-image" onerror="this.style.display='none'" data-original-src="${item.image}">
                 <div class="pile-item-info">
                     <div class="pile-item-part-id">Part ID: ${item.partId}</div>
                     <div class="pile-item-color">Цвет: ${colorName}</div>
