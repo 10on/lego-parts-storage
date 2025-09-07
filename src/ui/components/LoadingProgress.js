@@ -89,7 +89,6 @@ class LoadingProgress {
                         <div class="step-number">${stepIndex + 1}</div>
                         <div class="step-info">
                             <div class="step-title">${step.title}</div>
-                            <div class="step-description">${step.description}</div>
                         </div>
                     </div>
                     <div class="step-progress">
@@ -289,7 +288,7 @@ class LoadingProgress {
                 title: 'Загрузка каталога деталей'
             },
             {
-                title: 'Инициализация компонентов'
+                title: 'Инициализация приложения'
             }
         ];
 
