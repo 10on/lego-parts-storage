@@ -1038,6 +1038,66 @@ class LCXIndexedDBAdapter {
         });
     }
 
+    /**
+     * Получает доступные цвета для конкретной детали
+     * @param {string} partId - ID детали
+     * @returns {Promise<Array>} Массив доступных цветов с информацией
+     */
+    async getAvailableColorsForPart(partId) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        const transaction = this.db.transaction(['partColors', 'colors'], 'readonly');
+        const partColorsStore = transaction.objectStore('partColors');
+        const colorsStore = transaction.objectStore('colors');
+        
+        return new Promise((resolve, reject) => {
+            // Получаем все связи для данной детали
+            const partColorsRequest = partColorsStore.index('partId').getAll(partId);
+            
+            partColorsRequest.onsuccess = () => {
+                const partColors = partColorsRequest.result;
+                
+                if (partColors.length === 0) {
+                    resolve([]);
+                    return;
+                }
+                
+                // Получаем информацию о цветах
+                const colorIds = partColors.map(pc => pc.colorId);
+                const colorPromises = colorIds.map(colorId => {
+                    return new Promise((resolveColor, rejectColor) => {
+                        const colorRequest = colorsStore.get(colorId);
+                        colorRequest.onsuccess = () => {
+                            const color = colorRequest.result;
+                            if (color) {
+                                resolveColor({
+                                    id: color.id,
+                                    name: color.name,
+                                    rgb: color.rgb,
+                                    partId: partId
+                                });
+                            } else {
+                                resolveColor(null);
+                            }
+                        };
+                        colorRequest.onerror = () => rejectColor(colorRequest.error);
+                    });
+                });
+                
+                Promise.all(colorPromises).then(colors => {
+                    // Фильтруем null значения и сортируем по имени
+                    const validColors = colors.filter(color => color !== null);
+                    validColors.sort((a, b) => a.name.localeCompare(b.name));
+                    resolve(validColors);
+                }).catch(reject);
+            };
+            
+            partColorsRequest.onerror = () => reject(partColorsRequest.error);
+        });
+    }
+
     // Методы совместимости для старого API
     async loadFromCSV() {
         console.log('📦 CSV loading not supported in LCX adapter, use loadFromLCX instead');

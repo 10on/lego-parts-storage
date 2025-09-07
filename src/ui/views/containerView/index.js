@@ -457,8 +457,11 @@ class ContainerView {
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Цвет *</label>
-                            <input type="text" class="form-input autocomplete-input" id="cell-color" value="${displayData?.color || ''}" placeholder="Начните вводить цвет..." required>
-                            <small class="form-help">Выберите цвет из каталога BrickLink</small>
+                            <input type="text" class="form-input autocomplete-input" id="cell-color" value="${displayData?.color || ''}" placeholder="Сначала выберите деталь..." required disabled>
+                            <div class="color-restriction-info" id="cell-color-restriction-info" style="display: none;">
+                                <small>Доступные цвета для выбранной детали</small>
+                            </div>
+                            <small class="form-help">Выберите цвет из доступных для детали</small>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Количество (опционально)</label>
@@ -599,8 +602,25 @@ class ContainerView {
                     console.warn('Failed to get part data:', error);
                     partInput.value = value;
                 }
+                
+                // Обрабатываем изменение Part ID для ограничения цветов
+                this.handleCellPartIdChange(value, editor);
+                
                 // Обновляем изображение при выборе детали
                 if (updateImage) updateImage();
+            }
+        });
+
+        // Добавляем обработчик для ручного ввода Part ID
+        partInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            // Извлекаем Part ID из значения (если есть формат "ID - Название")
+            const partId = value.includes(' - ') ? value.split(' - ')[0] : value;
+            this.handleCellPartIdChange(partId, editor);
+            
+            // Обновляем изображение при изменении Part ID
+            if (updateImage) {
+                setTimeout(() => updateImage(), 200);
             }
         });
 
@@ -611,24 +631,50 @@ class ContainerView {
     setupColorAutocomplete(editor, updateImage) {
         const colorInput = editor.querySelector('#cell-color');
 
-        if (!colorInput || !window.brickLinkData || !window.brickLinkData.isLoaded) {
+        if (!colorInput) {
+            console.warn('Color input not found');
+            return;
+        }
+
+        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
             console.warn('BrickLink data not loaded, using simple input');
             return;
         }
 
         const colorAutocomplete = new AutoComplete(colorInput, {
-            minChars: 0, // Показываем популярные цвета сразу
+            minChars: 0,
             delay: 100,
-            placeholder: 'Выберите или введите цвет...',
+            placeholder: 'Выберите цвет...',
             noResultsText: 'Цвет не найден',
             source: async (query) => {
+                // Если есть доступные цвета, используем их
+                if (this.availableColors && this.availableColors.length > 0) {
+                    const filteredColors = this.availableColors.filter(color => 
+                        color.name.toLowerCase().includes(query.toLowerCase())
+                    );
+                    return filteredColors.map(color => ({
+                        value: color.name,
+                        label: color.name,
+                        rgb: color.rgb,
+                        category: 'Цвета'
+                    }));
+                }
+                
+                // Иначе используем общий поиск
                 return window.brickLinkData.searchColors(query);
             },
             onSelect: (value, item) => {
                 colorInput.value = value;
+                // Валидируем выбранный цвет
+                this.validateCellSelectedColor(value, editor);
                 // Обновляем изображение при выборе цвета
-                updateImage();
+                if (updateImage) updateImage();
             }
+        });
+
+        // Добавляем обработчик для ручного ввода цвета
+        colorInput.addEventListener('input', (e) => {
+            this.validateCellSelectedColor(e.target.value, editor);
         });
 
         // Сохраняем ссылку для последующего удаления
@@ -761,6 +807,18 @@ class ContainerView {
         if (!color) {
             this.showValidationError(editor.querySelector('#cell-color'), 'Цвет обязателен');
             return;
+        }
+
+        // Валидация цвета - проверяем, доступен ли он для выбранной детали
+        if (this.availableColors && this.availableColors.length > 0) {
+            const isValidColor = this.availableColors.some(availableColor => 
+                availableColor.name.toLowerCase() === color.toLowerCase()
+            );
+            
+            if (!isValidColor) {
+                this.showValidationError(editor.querySelector('#cell-color'), `Цвет "${color}" недоступен для этой детали. Выберите из доступных цветов.`);
+                return;
+            }
         }
 
         if (quantityValue && (quantity < 1 || quantity > 999)) {
@@ -1339,10 +1397,43 @@ class ContainerView {
                 resolve();
             };
             
-            img.onerror = (error) => {
+            img.onerror = async (error) => {
                 console.warn('Image failed to load:', error, 'URL:', imageUrl);
-                this.showImagePlaceholder(imageElement, placeholderElement);
-                reject(new Error('Failed to load image'));
+                
+                // Пытаемся загрузить fallback изображения
+                const fallbackUrls = this.getFallbackImageUrls(imageUrl);
+                let fallbackLoaded = false;
+                
+                for (const fallbackUrl of fallbackUrls) {
+                    try {
+                        const fallbackImg = new Image();
+                        const fallbackPromise = new Promise((resolveFallback, rejectFallback) => {
+                            fallbackImg.onload = () => {
+                                console.log('Fallback image loaded:', fallbackUrl);
+                                imageElement.src = fallbackUrl;
+                                imageElement.style.display = 'block';
+                                placeholderElement.style.display = 'none';
+                                fallbackLoaded = true;
+                                resolveFallback();
+                            };
+                            fallbackImg.onerror = () => rejectFallback();
+                        });
+                        
+                        fallbackImg.src = fallbackUrl;
+                        await fallbackPromise;
+                        break; // Если fallback загрузился, выходим из цикла
+                    } catch (fallbackError) {
+                        console.warn('Fallback image failed:', fallbackUrl);
+                        continue; // Пробуем следующий fallback
+                    }
+                }
+                
+                if (!fallbackLoaded) {
+                    // Если все fallback'и не сработали, показываем заглушку с информацией
+                    this.showImagePlaceholderWithError(imageElement, placeholderElement, 'Изображение недоступно');
+                }
+                
+                resolve(); // Не reject'им, чтобы не ломать UI
             };
             
             img.src = imageUrl;
@@ -1353,6 +1444,50 @@ class ContainerView {
         imageElement.style.display = 'none';
         imageElement.src = '';
         placeholderElement.style.display = 'flex';
+        placeholderElement.innerHTML = `
+            <div class="placeholder-icon">🖼️</div>
+            <div class="placeholder-text">Выберите деталь и цвет</div>
+        `;
+    }
+
+    showImagePlaceholderWithError(imageElement, placeholderElement, errorMessage) {
+        imageElement.style.display = 'none';
+        imageElement.src = '';
+        placeholderElement.style.display = 'flex';
+        placeholderElement.innerHTML = `
+            <div class="placeholder-icon">❌</div>
+            <div class="placeholder-text">${errorMessage}</div>
+        `;
+        placeholderElement.style.color = 'var(--danger-color)';
+    }
+
+    getFallbackImageUrls(originalUrl) {
+        // Извлекаем partId и colorId из URL
+        const urlParts = originalUrl.match(/\/PN\/(\d+)\/(\w+)\.png$/);
+        if (!urlParts) return [];
+        
+        const [, colorId, partId] = urlParts;
+        const fallbackUrls = [];
+        
+        // 1. Пробуем с дефолтным цветом (ID = 0)
+        if (colorId !== '0') {
+            fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/0/${partId}.png`);
+        }
+        
+        // 2. Пробуем с базовыми цветами
+        const basicColors = ['1', '2', '3', '4', '5']; // White, Tan, Yellow, Orange, Red
+        for (const basicColorId of basicColors) {
+            if (basicColorId !== colorId) {
+                fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/${basicColorId}/${partId}.png`);
+            }
+        }
+        
+        // 3. Пробуем с черным цветом (ID = 11)
+        if (colorId !== '11') {
+            fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/11/${partId}.png`);
+        }
+        
+        return fallbackUrls;
     }
 
     // === МЕТОДЫ ОБЪЕДИНЕНИЯ ЯЧЕЕК ===
@@ -1867,6 +2002,132 @@ class ContainerView {
             if (window.app) {
                 window.app.showNotification('Содержимое перемещено между ячейками', 'success');
                 window.app.autoSave();
+            }
+        }
+    }
+
+    /**
+     * Обрабатывает изменение Part ID в модалке контейнера
+     */
+    async handleCellPartIdChange(partId, editor) {
+        console.log('handleCellPartIdChange called with:', partId);
+        
+        const colorInput = editor.querySelector('#cell-color');
+        const colorInfo = editor.querySelector('#cell-color-restriction-info');
+        
+        if (!colorInput) {
+            console.warn('Color input not found in editor');
+            return;
+        }
+        
+        if (!colorInfo) {
+            console.warn('Color info element not found in editor');
+            return;
+        }
+        
+        if (!partId || partId.trim() === '') {
+            console.log('Empty part ID, disabling color selection');
+            // Если Part ID пустой, отключаем выбор цвета
+            colorInput.disabled = true;
+            colorInput.placeholder = 'Сначала выберите деталь';
+            colorInput.value = '';
+            colorInfo.style.display = 'none';
+            this.availableColors = [];
+            return;
+        }
+
+        try {
+            console.log('Loading colors for part:', partId);
+            // Показываем индикатор загрузки
+            colorInput.disabled = true;
+            colorInput.placeholder = 'Загрузка доступных цветов...';
+            colorInfo.style.display = 'block';
+            colorInfo.innerHTML = '<small>⏳ Загрузка доступных цветов...</small>';
+
+            // Получаем доступные цвета для детали
+            if (window.brickLinkData && window.brickLinkData.isLoaded) {
+                console.log('BrickLink data is loaded, fetching colors...');
+                this.availableColors = await window.brickLinkData.getAvailableColorsForPart(partId);
+                console.log('Available colors:', this.availableColors);
+                
+                if (this.availableColors.length > 0) {
+                    console.log('Found colors, enabling selection');
+                    // Включаем выбор цвета
+                    colorInput.disabled = false;
+                    colorInput.placeholder = `Выберите из ${this.availableColors.length} доступных цветов`;
+                    colorInfo.innerHTML = `<small>✅ Найдено ${this.availableColors.length} доступных цветов</small>`;
+                    
+                    // Обновляем автодополнение
+                    if (this.colorAutocomplete) {
+                        this.colorAutocomplete.destroy();
+                    }
+                    // Создаем новую функцию updateImage для обновленного автодополнения
+                    const newUpdateImage = this.setupImageUpdate(editor);
+                    this.setupColorAutocomplete(editor, newUpdateImage);
+                    
+                    // Обновляем изображение для выбранной детали
+                    if (newUpdateImage) {
+                        setTimeout(() => newUpdateImage(), 100);
+                    }
+                } else {
+                    console.log('No colors found for this part');
+                    // Нет доступных цветов
+                    colorInput.disabled = true;
+                    colorInput.placeholder = 'Нет доступных цветов для этой детали';
+                    colorInput.value = '';
+                    colorInfo.innerHTML = '<small>❌ Нет доступных цветов для этой детали</small>';
+                }
+            } else {
+                console.log('BrickLink data not loaded');
+                // BrickLink данные не загружены
+                colorInput.disabled = false;
+                colorInput.placeholder = 'BrickLink данные не загружены - введите цвет вручную';
+                colorInfo.innerHTML = '<small>⚠️ BrickLink данные не загружены</small>';
+            }
+        } catch (error) {
+            console.error('Error loading available colors:', error);
+            colorInput.disabled = false;
+            colorInput.placeholder = 'Ошибка загрузки - введите цвет вручную';
+            colorInfo.innerHTML = '<small>❌ Ошибка загрузки цветов</small>';
+        }
+    }
+
+    /**
+     * Валидирует выбранный цвет в модалке контейнера
+     */
+    validateCellSelectedColor(selectedColorName, editor) {
+        console.log('validateCellSelectedColor called with:', selectedColorName);
+        console.log('Available colors:', this.availableColors);
+        
+        if (!this.availableColors || this.availableColors.length === 0) {
+            console.log('No available colors, skipping validation');
+            return;
+        }
+
+        const isValidColor = this.availableColors.some(color => 
+            color.name.toLowerCase() === selectedColorName.toLowerCase()
+        );
+
+        console.log('Is valid color:', isValidColor);
+
+        const colorInput = editor.querySelector('#cell-color');
+        const colorInfo = editor.querySelector('#cell-color-restriction-info');
+
+        if (isValidColor) {
+            // Цвет валиден
+            colorInput.style.borderColor = '';
+            colorInput.style.backgroundColor = '';
+            if (colorInfo) {
+                colorInfo.innerHTML = `<small>✅ Цвет "${selectedColorName}" доступен для этой детали</small>`;
+                colorInfo.className = 'color-restriction-info success';
+            }
+        } else {
+            // Цвет не валиден
+            colorInput.style.borderColor = 'var(--danger-color)';
+            colorInput.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+            if (colorInfo) {
+                colorInfo.innerHTML = `<small>❌ Цвет "${selectedColorName}" недоступен для этой детали</small>`;
+                colorInfo.className = 'color-restriction-info error';
             }
         }
     }

@@ -88,6 +88,7 @@ class Router {
     }
 
     navigate(view, title) {
+        console.log('Router navigating to:', view, title);
         if (this.currentRoute !== view) {
             this.currentRoute = view;
             
@@ -96,7 +97,10 @@ class Router {
             
             // Уведомляем приложение о смене маршрута
             if (window.app && typeof window.app.showView === 'function') {
+                console.log('Calling app.showView with:', view);
                 window.app.showView(view);
+            } else {
+                console.warn('App or showView not available');
             }
         }
     }

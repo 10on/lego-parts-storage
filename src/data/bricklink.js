@@ -188,6 +188,14 @@ class BrickLinkData {
         if (!this.isLoaded) return null;
         return this.dbAdapter.getStats();
     }
+
+    /**
+     * Получить доступные цвета для детали
+     */
+    async getAvailableColorsForPart(partId) {
+        if (!this.isLoaded) return [];
+        return this.dbAdapter.getAvailableColorsForPart(partId);
+    }
 }
 
 // Экспортируем синглтон

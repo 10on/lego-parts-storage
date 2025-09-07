@@ -372,6 +372,7 @@ class PileView {
     }
 
     showAddItemModal() {
+        console.log('showAddItemModal called');
         const content = `
             <form id="add-pile-item-form">
                 <div class="form-group">
@@ -385,7 +386,10 @@ class PileView {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Цвет</label>
-                        <input type="text" class="form-input" id="new-color" placeholder="Red">
+                        <input type="text" class="form-input" id="new-color" placeholder="Выберите цвет..." disabled>
+                        <div class="color-restriction-info" id="color-restriction-info" style="display: none;">
+                            <small>Доступные цвета для выбранной детали</small>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -401,10 +405,40 @@ class PileView {
         if (window.app) {
             window.app.showModal('Добавить деталь в кучу', content);
             
-            document.getElementById('add-pile-item-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.addNewItem();
-            });
+            // Небольшая задержка для создания DOM элементов
+            setTimeout(() => {
+                console.log('Initializing modal components');
+                // Инициализируем автодополнение для Part ID
+                this.initializePartIdAutocomplete();
+                
+                // Инициализируем автодополнение для цветов (изначально отключено)
+                this.initializeColorAutocomplete();
+                
+                // Обработчик изменения Part ID
+                const partIdInput = document.getElementById('new-part-id');
+                if (partIdInput) {
+                    partIdInput.addEventListener('input', (e) => {
+                        this.handlePartIdChange(e.target.value);
+                    });
+                }
+
+                // Обработчик изменения цвета для валидации
+                const colorInput = document.getElementById('new-color');
+                if (colorInput) {
+                    colorInput.addEventListener('input', (e) => {
+                        this.validateSelectedColor(e.target.value);
+                    });
+                }
+                
+                // Обработчик отправки формы
+                const form = document.getElementById('add-pile-item-form');
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.addNewItem();
+                    });
+                }
+            }, 100);
         }
     }
 
@@ -414,6 +448,18 @@ class PileView {
         const quantity = quantityValue ? parseInt(quantityValue) : null;
         const color = document.getElementById('new-color').value;
         const image = document.getElementById('new-image').value;
+
+        // Валидация цвета
+        if (this.availableColors && this.availableColors.length > 0) {
+            const isValidColor = this.availableColors.some(availableColor => 
+                availableColor.name.toLowerCase() === color.toLowerCase()
+            );
+
+            if (!isValidColor) {
+                window.app.showNotification('Выбранный цвет недоступен для этой детали!', 'error');
+                return;
+            }
+        }
 
         const newItem = {
             id: `pile-${Date.now()}`,
@@ -482,6 +528,217 @@ class PileView {
         } catch (error) {
             console.error('Error getting color name:', error);
             return `Color ${colorId}`; // Fallback к ID цвета
+        }
+    }
+
+    /**
+     * Инициализирует автодополнение для Part ID
+     */
+    initializePartIdAutocomplete() {
+        const partIdInput = document.getElementById('new-part-id');
+        if (!partIdInput) {
+            console.warn('Part ID input not found');
+            return;
+        }
+        
+        if (!window.AutoComplete) {
+            console.warn('AutoComplete not available');
+            return;
+        }
+
+        console.log('Initializing Part ID autocomplete');
+        
+        new AutoComplete(partIdInput, {
+            minChars: 1,
+            delay: 300,
+            maxResults: 20,
+            placeholder: '3001',
+            source: async (query) => {
+                console.log('Searching parts for:', query);
+                if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+                    console.warn('BrickLink data not loaded');
+                    return [];
+                }
+                
+                try {
+                    const parts = await window.brickLinkData.searchParts(query);
+                    console.log('Found parts:', parts.length);
+                    return parts.map(part => ({
+                        value: part.partId,
+                        label: `${part.partId} - ${part.name}`,
+                        category: 'Детали'
+                    }));
+                } catch (error) {
+                    console.error('Error searching parts:', error);
+                    return [];
+                }
+            },
+            onSelect: (value) => {
+                console.log('Part selected:', value);
+                // При выборе детали обновляем доступные цвета
+                this.handlePartIdChange(value);
+            }
+        });
+    }
+
+    /**
+     * Инициализирует автодополнение для цветов
+     */
+    initializeColorAutocomplete() {
+        const colorInput = document.getElementById('new-color');
+        if (!colorInput) {
+            console.warn('Color input not found');
+            return;
+        }
+        
+        if (!window.AutoComplete) {
+            console.warn('AutoComplete not available');
+            return;
+        }
+
+        console.log('Initializing color autocomplete');
+
+        this.colorAutocomplete = new AutoComplete(colorInput, {
+            minChars: 0,
+            delay: 200,
+            maxResults: 50,
+            placeholder: 'Выберите цвет...',
+            source: async (query) => {
+                console.log('Searching colors for:', query);
+                if (!this.availableColors || this.availableColors.length === 0) {
+                    console.log('No available colors');
+                    return [];
+                }
+                
+                const filteredColors = this.availableColors.filter(color => 
+                    color.name.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                console.log('Filtered colors:', filteredColors.length);
+                return filteredColors.map(color => ({
+                    value: color.name,
+                    label: color.name,
+                    rgb: color.rgb,
+                    category: 'Цвета'
+                }));
+            },
+            onSelect: (value) => {
+                console.log('Color selected:', value);
+                this.validateSelectedColor(value);
+            }
+        });
+    }
+
+    /**
+     * Валидирует выбранный цвет
+     */
+    validateSelectedColor(selectedColorName) {
+        if (!this.availableColors || this.availableColors.length === 0) {
+            return;
+        }
+
+        const isValidColor = this.availableColors.some(color => 
+            color.name.toLowerCase() === selectedColorName.toLowerCase()
+        );
+
+        const colorInput = document.getElementById('new-color');
+        const colorInfo = document.getElementById('color-restriction-info');
+
+        if (isValidColor) {
+            // Цвет валиден
+            colorInput.style.borderColor = '';
+            colorInput.style.backgroundColor = '';
+            if (colorInfo) {
+                colorInfo.innerHTML = `<small>✅ Цвет "${selectedColorName}" доступен для этой детали</small>`;
+                colorInfo.className = 'color-restriction-info success';
+            }
+        } else {
+            // Цвет не валиден
+            colorInput.style.borderColor = 'var(--danger-color)';
+            colorInput.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+            if (colorInfo) {
+                colorInfo.innerHTML = `<small>❌ Цвет "${selectedColorName}" недоступен для этой детали</small>`;
+                colorInfo.className = 'color-restriction-info error';
+            }
+        }
+    }
+
+    /**
+     * Обрабатывает изменение Part ID
+     */
+    async handlePartIdChange(partId) {
+        console.log('handlePartIdChange called with:', partId);
+        
+        const colorInput = document.getElementById('new-color');
+        const colorInfo = document.getElementById('color-restriction-info');
+        
+        if (!colorInput) {
+            console.warn('Color input not found');
+            return;
+        }
+        
+        if (!colorInfo) {
+            console.warn('Color info element not found');
+            return;
+        }
+        
+        if (!partId || partId.trim() === '') {
+            console.log('Empty part ID, disabling color selection');
+            // Если Part ID пустой, отключаем выбор цвета
+            colorInput.disabled = true;
+            colorInput.placeholder = 'Сначала выберите деталь';
+            colorInput.value = '';
+            colorInfo.style.display = 'none';
+            this.availableColors = [];
+            return;
+        }
+
+        try {
+            console.log('Loading colors for part:', partId);
+            // Показываем индикатор загрузки
+            colorInput.disabled = true;
+            colorInput.placeholder = 'Загрузка доступных цветов...';
+            colorInfo.style.display = 'block';
+            colorInfo.innerHTML = '<small>⏳ Загрузка доступных цветов...</small>';
+
+            // Получаем доступные цвета для детали
+            if (window.brickLinkData && window.brickLinkData.isLoaded) {
+                console.log('BrickLink data is loaded, fetching colors...');
+                this.availableColors = await window.brickLinkData.getAvailableColorsForPart(partId);
+                console.log('Available colors:', this.availableColors);
+                
+                if (this.availableColors.length > 0) {
+                    console.log('Found colors, enabling selection');
+                    // Включаем выбор цвета
+                    colorInput.disabled = false;
+                    colorInput.placeholder = `Выберите из ${this.availableColors.length} доступных цветов`;
+                    colorInfo.innerHTML = `<small>✅ Найдено ${this.availableColors.length} доступных цветов</small>`;
+                    
+                    // Обновляем автодополнение
+                    if (this.colorAutocomplete) {
+                        this.colorAutocomplete.destroy();
+                    }
+                    this.initializeColorAutocomplete();
+                } else {
+                    console.log('No colors found for this part');
+                    // Нет доступных цветов
+                    colorInput.disabled = true;
+                    colorInput.placeholder = 'Нет доступных цветов для этой детали';
+                    colorInput.value = '';
+                    colorInfo.innerHTML = '<small>❌ Нет доступных цветов для этой детали</small>';
+                }
+            } else {
+                console.log('BrickLink data not loaded');
+                // BrickLink данные не загружены
+                colorInput.disabled = false;
+                colorInput.placeholder = 'BrickLink данные не загружены - введите цвет вручную';
+                colorInfo.innerHTML = '<small>⚠️ BrickLink данные не загружены</small>';
+            }
+        } catch (error) {
+            console.error('Error loading available colors:', error);
+            colorInput.disabled = false;
+            colorInput.placeholder = 'Ошибка загрузки - введите цвет вручную';
+            colorInfo.innerHTML = '<small>❌ Ошибка загрузки цветов</small>';
         }
     }
 }

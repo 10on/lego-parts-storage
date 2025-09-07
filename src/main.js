@@ -203,6 +203,7 @@ class LegoStorageApp {
     }
 
     showView(viewName) {
+        console.log('App showView called with:', viewName);
         // Скрыть все виды
         document.querySelectorAll('.view').forEach(view => {
             view.classList.remove('active');
@@ -222,6 +223,8 @@ class LegoStorageApp {
             
             // Обновить содержимое вида
             this.updateViewContent(viewName);
+        } else {
+            console.warn('Target view not found:', `${viewName}-view`);
         }
     }
 

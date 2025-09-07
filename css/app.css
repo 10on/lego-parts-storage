@@ -866,3 +866,104 @@ input[type="checkbox"]:disabled {
     min-width: 40px;
     text-align: right;
 }
+
+/* Стили для ограниченного выбора цветов */
+.color-restriction-info {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--border-radius) * 0.5);
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.color-restriction-info small {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.color-restriction-info small::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--info-color);
+    flex-shrink: 0;
+}
+
+.color-restriction-info small:has-text("✅")::before {
+    background-color: var(--success-color);
+}
+
+.color-restriction-info small:has-text("❌")::before {
+    background-color: var(--danger-color);
+}
+
+.color-restriction-info small:has-text("⚠️")::before {
+    background-color: var(--warning-color);
+}
+
+/* Стили для отключенного поля цвета */
+.form-input:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.form-input:disabled::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+/* Улучшенные стили для автодополнения цветов */
+.autocomplete-container .color-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.autocomplete-container .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-container .color-item .item-label {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* Анимация для загрузки цветов */
+@keyframes color-loading {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.color-restriction-info.loading small {
+    animation: color-loading 1.5s ease-in-out infinite;
+}
+
+/* Стили для успешной загрузки */
+.color-restriction-info.success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-color: var(--success-color);
+}
+
+.color-restriction-info.error {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: var(--danger-color);
+}
+
+.color-restriction-info.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-color: var(--warning-color);
+}
