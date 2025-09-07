@@ -45,7 +45,15 @@ class LegoStorageApp {
             
             // Этап 3: Загрузка каталога деталей
             initProgress.updateStep(2, 0, 'Загрузка данных BrickLink...');
-            await this.loadBrickLinkData(false); // Отключаем LCX прогресс
+            
+            // Создаем callback для передачи прогресса BrickLink в initProgress
+            const brickLinkProgressCallback = (step, percent, message) => {
+                // Маппим шаги BrickLink (0-8) в шаги initProgress (2)
+                const mappedPercent = Math.min(100, Math.max(0, percent));
+                initProgress.updateStep(2, mappedPercent, message);
+            };
+            
+            await this.loadBrickLinkData(false, brickLinkProgressCallback); // Отключаем LCX прогресс, но передаем callback
             initProgress.updateStep(2, 30, 'Данные BrickLink загружены');
             await new Promise(resolve => setTimeout(resolve, 200));
             
@@ -96,10 +104,10 @@ class LegoStorageApp {
         }
     }
 
-    async loadBrickLinkData(showProgress = true) {
+    async loadBrickLinkData(showProgress = true, progressCallback = null) {
         try {
             console.log('📦 Загрузка данных BrickLink...');
-            await window.brickLinkData.loadData(showProgress);
+            await window.brickLinkData.loadData(showProgress, progressCallback);
         } catch (error) {
             console.error('❌ Ошибка загрузки данных BrickLink:', error);
             this.showNotification('Ошибка загрузки данных каталога. Некоторые функции могут быть недоступны.', 'warning');

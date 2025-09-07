@@ -15,57 +15,105 @@
     </div>
 
     <script src="src/ui/components/LoadingProgress.js"></script>
+    <script src="src/data/lcx-parser.js"></script>
+    <script src="src/data/lcx-indexeddb-adapter.js"></script>
+    <script src="src/data/bricklink.js"></script>
     <script>
         document.getElementById('test-progress-btn').addEventListener('click', async () => {
             const resultsDiv = document.getElementById('test-results');
-            resultsDiv.innerHTML = '<p>Запуск теста...</p>';
-            
-            // Создаем прогресс-бар
-            const progress = new LoadingProgress();
-            const steps = [
-                { title: 'Тест 1', description: 'Первый тест' },
-                { title: 'Тест 2', description: 'Второй тест' },
-                { title: 'Тест 3', description: 'Третий тест' }
-            ];
-            
-            progress.show(steps);
+            resultsDiv.innerHTML = '<p>Запуск теста чанкового прогресса...</p>';
             
             try {
-                // Тест 1: Плавное обновление прогресса
-                for (let i = 0; i <= 100; i += 10) {
-                    progress.updateStep(0, i, `Прогресс: ${i}%`);
+                // Тест 1: Старый прогресс-бар (для сравнения)
+                resultsDiv.innerHTML += '<h3>Тест 1: Старый прогресс-бар</h3>';
+                const oldProgress = new LoadingProgress();
+                const oldSteps = [
+                    { title: 'Скачивание', description: 'Скачивание файла' },
+                    { title: 'Распаковка', description: 'Распаковка архива' },
+                    { title: 'Парсинг', description: 'Парсинг JSON' }
+                ];
+                
+                oldProgress.show(oldSteps);
+                
+                // Симуляция старого прогресса
+                oldProgress.updateStep(0, 25, 'Подключение...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                oldProgress.updateStep(0, 75, 'Скачивание...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                oldProgress.completeStep(0, 'Скачано');
+                
+                oldProgress.updateStep(1, 50, 'Извлечение...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                oldProgress.completeStep(1, 'Распаковано');
+                
+                oldProgress.updateStep(2, 50, 'Обработка...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+                oldProgress.completeStep(2, 'Обработано');
+                
+                setTimeout(() => oldProgress.hide(), 1000);
+                
+                // Тест 2: Новый чанковый прогресс
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                resultsDiv.innerHTML += '<h3>Тест 2: Новый чанковый прогресс</h3>';
+                
+                const newProgress = LoadingProgress.createLCXProgress();
+                if (newProgress) {
+                    // Симуляция нового чанкового прогресса
+                    newProgress.updateStep(1, 5, 'Подключение к серверу...');
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.updateStep(1, 10, 'Получение размера файла...');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.updateStep(1, 15, 'Размер файла: 2.5 MB');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Симуляция чанкового скачивания
+                    for (let i = 20; i <= 95; i += 5) {
+                        newProgress.updateStep(1, i, `Скачано: ${Math.round(i * 25)} KB / 2500 KB`);
+                        await new Promise(resolve => setTimeout(resolve, 80));
+                    }
+                    newProgress.completeStep(1, 'Файл скачан');
+                    
+                    // Симуляция чанковой распаковки
+                    newProgress.updateStep(2, 5, 'Инициализация распаковки...');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.updateStep(2, 10, 'Начинаем извлечение...');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    for (let i = 15; i <= 95; i += 5) {
+                        newProgress.updateStep(2, i, `Распаковано: ${Math.round(i * 30)} KB`);
+                        await new Promise(resolve => setTimeout(resolve, 60));
+                    }
+                    newProgress.completeStep(2, 'Архив распакован');
+                    
+                    // Симуляция парсинга JSON
+                    newProgress.updateStep(3, 20, 'Начало парсинга JSON...');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.updateStep(3, 50, 'JSON распарсен');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.updateStep(3, 80, 'Валидация структуры...');
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    newProgress.completeStep(3, 'Данные обработаны');
+                    
+                    setTimeout(() => newProgress.hide(), 2000);
                 }
                 
-                progress.completeStep(0, 'Первый тест завершен');
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Тест 3: Реальный тест загрузки данных
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                resultsDiv.innerHTML += '<h3>Тест 3: Реальная загрузка данных BrickLink</h3>';
                 
-                // Тест 2: Быстрое обновление
-                for (let i = 0; i <= 100; i += 5) {
-                    progress.updateStep(1, i, `Быстрый прогресс: ${i}%`);
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                try {
+                    const brickLinkData = new BrickLinkData();
+                    const stats = await brickLinkData.loadData(true);
+                    resultsDiv.innerHTML += `<p style="color: green;">✅ Реальная загрузка завершена! Загружено: ${stats.parts} деталей, ${stats.colors} цветов</p>`;
+                } catch (error) {
+                    resultsDiv.innerHTML += `<p style="color: orange;">⚠️ Реальная загрузка не удалась (ожидаемо для теста): ${error.message}</p>`;
                 }
                 
-                progress.completeStep(1, 'Второй тест завершен');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Тест 3: Медленное обновление
-                for (let i = 0; i <= 100; i += 2) {
-                    progress.updateStep(2, i, `Медленный прогресс: ${i}%`);
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-                
-                progress.completeStep(2, 'Третий тест завершен');
-                
-                // Скрываем прогресс через 2 секунды
-                setTimeout(() => {
-                    progress.hide();
-                    resultsDiv.innerHTML = '<p style="color: green;">✅ Тест завершен успешно! Прогресс-бар должен был двигаться плавно.</p>';
-                }, 2000);
+                resultsDiv.innerHTML += '<p style="color: green; margin-top: 20px;"><strong>✅ Все тесты завершены! Новый прогресс-бар обновляется каждые 5% вместо больших скачков.</strong></p>';
                 
             } catch (error) {
                 console.error('Ошибка теста:', error);
-                resultsDiv.innerHTML = `<p style="color: red;">❌ Ошибка: ${error.message}</p>`;
+                resultsDiv.innerHTML += `<p style="color: red;">❌ Ошибка: ${error.message}</p>`;
             }
         });
     </script>

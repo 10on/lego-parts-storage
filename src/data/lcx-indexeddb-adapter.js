@@ -614,24 +614,33 @@ class LCXIndexedDBAdapter {
         try {
             console.log('📁 Loading LCX file: data/bricklink-catalog.lcx.json.gz');
             
-            // Шаг 1: Скачивание файла данных
-            if (progressCallback) progressCallback(1, 25, 'Подключение к серверу...');
+            // Шаг 1: Чанковое скачивание файла данных
+            if (progressCallback) progressCallback(1, 5, 'Подключение к серверу...');
             const response = await fetch('data/bricklink-catalog.lcx.json.gz');
             if (!response.ok) {
                 throw new Error(`Failed to fetch LCX file: ${response.status}`);
             }
-            if (progressCallback) progressCallback(1, 75, 'Скачивание файла...');
+            
+            if (progressCallback) progressCallback(1, 10, 'Получение размера файла...');
+            const contentLength = response.headers.get('content-length');
+            const totalSize = contentLength ? parseInt(contentLength) : 0;
+            
+            if (progressCallback) progressCallback(1, 15, `Размер файла: ${Math.round(totalSize / 1024)} KB`);
+            
+            // Чанковое скачивание
+            const compressedData = await this.downloadInChunks(response, progressCallback);
             if (progressCallback) progressCallback(1, 100, 'Файл скачан');
             
-            // Шаг 2: Распаковка архива
-            if (progressCallback) progressCallback(2, 50, 'Извлечение данных...');
-            const compressedData = await response.arrayBuffer();
-            const decompressedData = await this.decompressGzip(compressedData);
+            // Шаг 2: Чанковая распаковка архива
+            if (progressCallback) progressCallback(2, 5, 'Инициализация распаковки...');
+            const decompressedData = await this.decompressGzipWithProgress(compressedData, progressCallback);
             if (progressCallback) progressCallback(2, 100, 'Архив распакован');
             
             // Шаг 3: Парсинг JSON данных
-            if (progressCallback) progressCallback(3, 50, 'Обработка структуры...');
+            if (progressCallback) progressCallback(3, 20, 'Начало парсинга JSON...');
             const lcxData = JSON.parse(decompressedData);
+            if (progressCallback) progressCallback(3, 50, 'JSON распарсен');
+            if (progressCallback) progressCallback(3, 80, 'Валидация структуры...');
             if (progressCallback) progressCallback(3, 100, 'Данные обработаны');
             
             // Загружаем данные в IndexedDB (шаги 4-8)
@@ -645,7 +654,122 @@ class LCXIndexedDBAdapter {
     }
 
     /**
-     * Распаковывает gzip данные
+     * Чанковое скачивание файла с прогрессом
+     */
+    async downloadInChunks(response, progressCallback = null) {
+        const reader = response.body.getReader();
+        const chunks = [];
+        let receivedLength = 0;
+        const contentLength = response.headers.get('content-length');
+        const totalSize = contentLength ? parseInt(contentLength) : 0;
+        
+        let progressStep = 20; // Начинаем с 20% после получения размера
+        const progressIncrement = 5; // Обновляем каждые 5%
+        
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+                
+                chunks.push(value);
+                receivedLength += value.length;
+                
+                // Обновляем прогресс каждые 5%
+                if (totalSize > 0) {
+                    const currentProgress = Math.floor((receivedLength / totalSize) * 75) + 20; // 20-95%
+                    if (currentProgress >= progressStep) {
+                        if (progressCallback) {
+                            progressCallback(1, currentProgress, 
+                                `Скачано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
+                        }
+                        progressStep += progressIncrement;
+                    }
+                } else {
+                    // Если размер неизвестен, обновляем каждые 50KB
+                    if (receivedLength % (50 * 1024) < value.length) {
+                        if (progressCallback) {
+                            progressCallback(1, Math.min(95, 20 + (receivedLength / 1024) * 0.1), 
+                                `Скачано: ${Math.round(receivedLength / 1024)} KB`);
+                        }
+                    }
+                }
+                
+                // Небольшая задержка для демонстрации прогресса
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
+            // Объединяем все чанки
+            const result = new Uint8Array(receivedLength);
+            let position = 0;
+            for (const chunk of chunks) {
+                result.set(chunk, position);
+                position += chunk.length;
+            }
+            
+            return result;
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    /**
+     * Распаковывает gzip данные с прогрессом
+     */
+    async decompressGzipWithProgress(compressedData, progressCallback = null) {
+        const stream = new DecompressionStream('gzip');
+        const writer = stream.writable.getWriter();
+        const reader = stream.readable.getReader();
+        
+        // Записываем сжатые данные
+        writer.write(compressedData);
+        writer.close();
+        
+        // Читаем распакованные данные с прогрессом
+        const chunks = [];
+        let done = false;
+        let totalDecompressed = 0;
+        let progressStep = 10;
+        const progressIncrement = 5;
+        
+        while (!done) {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            
+            if (value) {
+                chunks.push(value);
+                totalDecompressed += value.length;
+                
+                // Обновляем прогресс каждые 5%
+                const currentProgress = Math.min(95, 10 + (totalDecompressed / 1024) * 0.1);
+                if (currentProgress >= progressStep) {
+                    if (progressCallback) {
+                        progressCallback(2, currentProgress, 
+                            `Распаковано: ${Math.round(totalDecompressed / 1024)} KB`);
+                    }
+                    progressStep += progressIncrement;
+                }
+                
+                // Небольшая задержка для демонстрации прогресса
+                await new Promise(resolve => setTimeout(resolve, 5));
+            }
+        }
+        
+        // Объединяем чанки в строку
+        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        
+        for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+        }
+        
+        return new TextDecoder().decode(result);
+    }
+
+    /**
+     * Распаковывает gzip данные (старый метод для совместимости)
      */
     async decompressGzip(compressedData) {
         const stream = new DecompressionStream('gzip');

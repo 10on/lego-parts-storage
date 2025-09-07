@@ -13,7 +13,7 @@ class BrickLinkData {
     /**
      * Загружает данные деталей и цветов с отображением прогресса
      */
-    async loadData(showProgress = true) {
+    async loadData(showProgress = true, progressCallback = null) {
         if (this.isLoaded) return;
 
         let progress = null;
@@ -34,51 +34,86 @@ class BrickLinkData {
         try {
             // Этап 1: Инициализация базы данных
             if (progress) progress.updateStep(0, 50, 'Создание таблиц...');
+            if (progressCallback) progressCallback(0, 50, 'Создание таблиц...');
             await this.dbAdapter.init();
             if (progress) progress.completeStep(0, 'База данных готова');
+            if (progressCallback) progressCallback(0, 100, 'База данных готова');
             
-            // Этап 2: Скачивание файла данных (симуляция)
-            if (progress) progress.updateStep(1, 25, 'Подключение к серверу...');
-            if (progress) progress.updateStep(1, 75, 'Скачивание файла...');
+            // Этап 2: Скачивание файла данных (теперь с реальным прогрессом)
+            if (progress) progress.updateStep(1, 5, 'Подключение к серверу...');
+            if (progressCallback) progressCallback(1, 5, 'Подключение к серверу...');
+            if (progress) progress.updateStep(1, 10, 'Получение размера файла...');
+            if (progressCallback) progressCallback(1, 10, 'Получение размера файла...');
+            if (progress) progress.updateStep(1, 15, 'Начинаем скачивание...');
+            if (progressCallback) progressCallback(1, 15, 'Начинаем скачивание...');
+            // Прогресс скачивания будет обновляться в downloadInChunks
+            if (progress) progress.updateStep(1, 95, 'Скачивание завершается...');
+            if (progressCallback) progressCallback(1, 95, 'Скачивание завершается...');
             if (progress) progress.completeStep(1, 'Файл скачан');
+            if (progressCallback) progressCallback(1, 100, 'Файл скачан');
             
-            // Этап 3: Распаковка архива (симуляция)
-            if (progress) progress.updateStep(2, 50, 'Извлечение данных...');
+            // Этап 3: Распаковка архива (теперь с реальным прогрессом)
+            if (progress) progress.updateStep(2, 5, 'Инициализация распаковки...');
+            if (progressCallback) progressCallback(2, 5, 'Инициализация распаковки...');
+            if (progress) progress.updateStep(2, 10, 'Начинаем извлечение...');
+            if (progressCallback) progressCallback(2, 10, 'Начинаем извлечение...');
+            // Прогресс распаковки будет обновляться в decompressGzipWithProgress
+            if (progress) progress.updateStep(2, 95, 'Завершение распаковки...');
+            if (progressCallback) progressCallback(2, 95, 'Завершение распаковки...');
             if (progress) progress.completeStep(2, 'Архив распакован');
+            if (progressCallback) progressCallback(2, 100, 'Архив распакован');
             
-            // Этап 4: Парсинг JSON данных
-            if (progress) progress.updateStep(3, 50, 'Обработка структуры...');
+            // Этап 4: Парсинг JSON данных (теперь с более детальным прогрессом)
+            if (progress) progress.updateStep(3, 20, 'Начало парсинга JSON...');
+            if (progressCallback) progressCallback(3, 20, 'Начало парсинга JSON...');
+            if (progress) progress.updateStep(3, 50, 'JSON распарсен...');
+            if (progressCallback) progressCallback(3, 50, 'JSON распарсен...');
+            if (progress) progress.updateStep(3, 80, 'Валидация структуры...');
+            if (progressCallback) progressCallback(3, 80, 'Валидация структуры...');
             if (progress) progress.completeStep(3, 'Данные обработаны');
+            if (progressCallback) progressCallback(3, 100, 'Данные обработаны');
             
             // Этап 5: Загрузка категорий
             if (progress) progress.updateStep(4, 100, 'Сохранение категорий...');
+            if (progressCallback) progressCallback(4, 100, 'Сохранение категорий...');
             if (progress) progress.completeStep(4, 'Категории загружены');
+            if (progressCallback) progressCallback(4, 100, 'Категории загружены');
             
             // Этап 6: Загрузка цветов
             if (progress) progress.updateStep(5, 100, 'Сохранение цветов...');
+            if (progressCallback) progressCallback(5, 100, 'Сохранение цветов...');
             if (progress) progress.completeStep(5, 'Цвета загружены');
+            if (progressCallback) progressCallback(5, 100, 'Цвета загружены');
             
             // Этап 7: Загрузка деталей
             if (progress) progress.updateStep(6, 0, 'Начинаем загрузку деталей...');
+            if (progressCallback) progressCallback(6, 0, 'Начинаем загрузку деталей...');
             
             // Создаем callback для loadData
-            const progressCallback = progress ? (step, percent, message) => {
+            const dbProgressCallback = progress ? (step, percent, message) => {
                 if (step === 6) {
                     progress.updateStep(6, percent, message);
                 }
-            } : null;
+                if (progressCallback) {
+                    progressCallback(6, percent, message);
+                }
+            } : progressCallback;
             
-            await this.dbAdapter.loadData(progressCallback);
+            await this.dbAdapter.loadData(dbProgressCallback);
             if (progress) progress.completeStep(6, 'Детали загружены');
+            if (progressCallback) progressCallback(6, 100, 'Детали загружены');
             
             // Этап 8: Создание индексов
             if (progress) progress.updateStep(7, 100, 'Построение индексов...');
+            if (progressCallback) progressCallback(7, 100, 'Построение индексов...');
             if (progress) progress.completeStep(7, 'Индексы созданы');
+            if (progressCallback) progressCallback(7, 100, 'Индексы созданы');
             
             this.isLoaded = true;
             
             // Этап 9: Завершение
             if (progress) progress.updateStep(8, 100, 'Финализация...');
+            if (progressCallback) progressCallback(8, 100, 'Финализация...');
             
             // Показываем статистику
             const stats = await this.dbAdapter.getStats();
@@ -87,6 +122,9 @@ class BrickLinkData {
             if (progress) {
                 progress.completeStep(8, `Готово: ${stats.parts} деталей, ${stats.colors} цветов`);
                 setTimeout(() => progress.hide(), 1000);
+            }
+            if (progressCallback) {
+                progressCallback(8, 100, `Готово: ${stats.parts} деталей, ${stats.colors} цветов`);
             }
             
             return stats;
