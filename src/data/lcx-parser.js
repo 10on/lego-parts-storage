@@ -22,7 +22,7 @@ class LCXParser {
         try {
             if (typeof input === 'string') {
                 jsonString = input;
-                if (progressCallback) progressCallback(2, 100, 'Файл уже загружен');
+                if (progressCallback) progressCallback(2, 100, 'Данные уже загружены');
             } else if (input instanceof File || input instanceof Blob) {
                 // Проверяем, сжат ли файл
                 if (input.name && input.name.endsWith('.gz')) {
@@ -276,7 +276,7 @@ class LCXParser {
      * Загрузка файла с отслеживанием прогресса
      */
     async loadFileWithProgress(file, progressCallback = null) {
-        if (progressCallback) progressCallback(2, 0, 'Начинаем загрузку файла...');
+        if (progressCallback) progressCallback(2, 0, 'Начинаем чтение файла...');
         
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -284,12 +284,12 @@ class LCXParser {
             reader.onprogress = (event) => {
                 if (event.lengthComputable && progressCallback) {
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    progressCallback(2, percentComplete, `Загружено ${Math.round(event.loaded / 1024 / 1024)}MB из ${Math.round(event.total / 1024 / 1024)}MB`);
+                    progressCallback(2, percentComplete, `Прочитано ${Math.round(event.loaded / 1024 / 1024)}MB из ${Math.round(event.total / 1024 / 1024)}MB`);
                 }
             };
             
             reader.onload = () => {
-                if (progressCallback) progressCallback(2, 100, 'Файл загружен');
+                if (progressCallback) progressCallback(2, 100, 'Файл прочитан');
                 resolve(reader.result);
             };
             

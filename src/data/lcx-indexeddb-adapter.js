@@ -615,21 +615,21 @@ class LCXIndexedDBAdapter {
             console.log('📁 Loading LCX file: data/bricklink-catalog.lcx.json.gz');
             
             // Шаг 1: Чанковое скачивание файла данных
-            if (progressCallback) progressCallback(1, 5, 'Подключение к серверу...');
+            if (progressCallback) progressCallback(1, 5, 'Чтение локального архива...');
             const response = await fetch('data/bricklink-catalog.lcx.json.gz');
             if (!response.ok) {
                 throw new Error(`Failed to fetch LCX file: ${response.status}`);
             }
             
-            if (progressCallback) progressCallback(1, 10, 'Получение размера файла...');
+            if (progressCallback) progressCallback(1, 10, 'Получение размера архива...');
             const contentLength = response.headers.get('content-length');
             const totalSize = contentLength ? parseInt(contentLength) : 0;
             
-            if (progressCallback) progressCallback(1, 15, `Размер файла: ${Math.round(totalSize / 1024)} KB`);
+            if (progressCallback) progressCallback(1, 15, `Размер архива: ${Math.round(totalSize / 1024)} KB`);
             
             // Чанковое скачивание
             const compressedData = await this.downloadInChunks(response, progressCallback);
-            if (progressCallback) progressCallback(1, 100, 'Файл скачан');
+            if (progressCallback) progressCallback(1, 100, 'Архив прочитан');
             
             // Шаг 2: Чанковая распаковка архива
             if (progressCallback) progressCallback(2, 5, 'Инициализация распаковки...');
@@ -681,7 +681,7 @@ class LCXIndexedDBAdapter {
                     if (currentProgress >= progressStep) {
                         if (progressCallback) {
                             progressCallback(1, currentProgress, 
-                                `Скачано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
+                                `Прочитано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
                         }
                         progressStep += progressIncrement;
                     }
@@ -690,7 +690,7 @@ class LCXIndexedDBAdapter {
                     if (receivedLength % (50 * 1024) < value.length) {
                         if (progressCallback) {
                             progressCallback(1, Math.min(95, 20 + (receivedLength / 1024) * 0.1), 
-                                `Скачано: ${Math.round(receivedLength / 1024)} KB`);
+                                `Прочитано: ${Math.round(receivedLength / 1024)} KB`);
                         }
                     }
                 }

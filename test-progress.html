@@ -28,7 +28,7 @@
                 resultsDiv.innerHTML += '<h3>Тест 1: Старый прогресс-бар</h3>';
                 const oldProgress = new LoadingProgress();
                 const oldSteps = [
-                    { title: 'Скачивание', description: 'Скачивание файла' },
+                    { title: 'Чтение архива', description: 'Чтение локального архива' },
                     { title: 'Распаковка', description: 'Распаковка архива' },
                     { title: 'Парсинг', description: 'Парсинг JSON' }
                 ];
@@ -36,11 +36,11 @@
                 oldProgress.show(oldSteps);
                 
                 // Симуляция старого прогресса
-                oldProgress.updateStep(0, 25, 'Подключение...');
+                oldProgress.updateStep(0, 25, 'Чтение...');
                 await new Promise(resolve => setTimeout(resolve, 200));
-                oldProgress.updateStep(0, 75, 'Скачивание...');
+                oldProgress.updateStep(0, 75, 'Обработка...');
                 await new Promise(resolve => setTimeout(resolve, 200));
-                oldProgress.completeStep(0, 'Скачано');
+                oldProgress.completeStep(0, 'Прочитано');
                 
                 oldProgress.updateStep(1, 50, 'Извлечение...');
                 await new Promise(resolve => setTimeout(resolve, 200));
@@ -59,19 +59,19 @@
                 const newProgress = LoadingProgress.createLCXProgress();
                 if (newProgress) {
                     // Симуляция нового чанкового прогресса
-                    newProgress.updateStep(1, 5, 'Подключение к серверу...');
+                    newProgress.updateStep(1, 5, 'Чтение локального архива...');
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    newProgress.updateStep(1, 10, 'Получение размера файла...');
+                    newProgress.updateStep(1, 10, 'Получение размера архива...');
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    newProgress.updateStep(1, 15, 'Размер файла: 2.5 MB');
+                    newProgress.updateStep(1, 15, 'Размер архива: 2.5 MB');
                     await new Promise(resolve => setTimeout(resolve, 100));
                     
-                    // Симуляция чанкового скачивания
+                    // Симуляция чанкового чтения
                     for (let i = 20; i <= 95; i += 5) {
-                        newProgress.updateStep(1, i, `Скачано: ${Math.round(i * 25)} KB / 2500 KB`);
+                        newProgress.updateStep(1, i, `Прочитано: ${Math.round(i * 25)} KB / 2500 KB`);
                         await new Promise(resolve => setTimeout(resolve, 80));
                     }
-                    newProgress.completeStep(1, 'Файл скачан');
+                    newProgress.completeStep(1, 'Архив прочитан');
                     
                     // Симуляция чанковой распаковки
                     newProgress.updateStep(2, 5, 'Инициализация распаковки...');

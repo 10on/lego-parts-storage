@@ -39,18 +39,18 @@ class BrickLinkData {
             if (progress) progress.completeStep(0, 'База данных готова');
             if (progressCallback) progressCallback(0, 100, 'База данных готова');
             
-            // Этап 2: Скачивание файла данных (теперь с реальным прогрессом)
-            if (progress) progress.updateStep(1, 5, 'Подключение к серверу...');
-            if (progressCallback) progressCallback(1, 5, 'Подключение к серверу...');
-            if (progress) progress.updateStep(1, 10, 'Получение размера файла...');
-            if (progressCallback) progressCallback(1, 10, 'Получение размера файла...');
-            if (progress) progress.updateStep(1, 15, 'Начинаем скачивание...');
-            if (progressCallback) progressCallback(1, 15, 'Начинаем скачивание...');
-            // Прогресс скачивания будет обновляться в downloadInChunks
-            if (progress) progress.updateStep(1, 95, 'Скачивание завершается...');
-            if (progressCallback) progressCallback(1, 95, 'Скачивание завершается...');
-            if (progress) progress.completeStep(1, 'Файл скачан');
-            if (progressCallback) progressCallback(1, 100, 'Файл скачан');
+            // Этап 2: Чтение локального архива (теперь с реальным прогрессом)
+            if (progress) progress.updateStep(1, 5, 'Чтение локального архива...');
+            if (progressCallback) progressCallback(1, 5, 'Чтение локального архива...');
+            if (progress) progress.updateStep(1, 10, 'Получение размера архива...');
+            if (progressCallback) progressCallback(1, 10, 'Получение размера архива...');
+            if (progress) progress.updateStep(1, 15, 'Начинаем чтение...');
+            if (progressCallback) progressCallback(1, 15, 'Начинаем чтение...');
+            // Прогресс чтения будет обновляться в downloadInChunks
+            if (progress) progress.updateStep(1, 95, 'Чтение завершается...');
+            if (progressCallback) progressCallback(1, 95, 'Чтение завершается...');
+            if (progress) progress.completeStep(1, 'Архив прочитан');
+            if (progressCallback) progressCallback(1, 100, 'Архив прочитан');
             
             // Этап 3: Распаковка архива (теперь с реальным прогрессом)
             if (progress) progress.updateStep(2, 5, 'Инициализация распаковки...');
