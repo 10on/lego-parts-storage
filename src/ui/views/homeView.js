@@ -141,7 +141,7 @@ class HomeView {
                 
                 gridHtml += `
                     <div class="preview-cell ${isFilled ? 'filled' : 'empty'}" 
-                         style="background-color: ${isFilled ? '#fff' : 'transparent'};
+                         style="background-color: ${isFilled ? '#f5f5f5' : '#f5f5f5'};
                                 border: 1px solid ${this.darkenColor(color, 10)};">
                         ${isFilled ? '●' : ''}
                     </div>
