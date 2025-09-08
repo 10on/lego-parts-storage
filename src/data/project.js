@@ -172,6 +172,11 @@ class MockData {
                     });
                 }
                 
+                // 5% вероятность ячейки с несуществующим изображением для тестирования fallback
+                if (pseudoRandom > 0.25 && pseudoRandom < 0.3) {
+                    items[0].image = 'https://img.bricklink.com/ItemImage/PN/999/INVALID.png';
+                }
+                
                 cells.push({ items });
             } else {
                 cells.push(null);

@@ -973,14 +973,17 @@ input[type="checkbox"]:disabled {
     position: absolute;
     top: 2px;
     right: 2px;
-    background-color: rgba(255, 193, 7, 0.9);
-    color: var(--text-primary);
-    font-size: 0.7rem;
-    padding: 2px 4px;
+    background-color: rgba(13, 110, 253, 0.9);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
     border-radius: 3px;
     font-weight: 600;
     z-index: 10;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    min-width: 50px;
+    text-align: center;
 }
 
 /* Эффекты для fallback изображений */
@@ -1000,14 +1003,16 @@ img.fallback-image:hover {
 .cell-image.fallback-image,
 .cell-image-small.fallback-image,
 .part-thumbnail.fallback-image,
-.pile-item-image.fallback-image {
+.pile-item-image.fallback-image,
+.cell-part-image.fallback-image {
     position: relative;
 }
 
 .cell-image.fallback-image::after,
 .cell-image-small.fallback-image::after,
 .part-thumbnail.fallback-image::after,
-.pile-item-image.fallback-image::after {
+.pile-item-image.fallback-image::after,
+.cell-part-image.fallback-image::after {
     content: '';
     position: absolute;
     top: 0;

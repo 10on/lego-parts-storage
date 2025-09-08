@@ -36,7 +36,7 @@ class PileView {
                 // Если изображение не загрузилось, пробуем fallback
                 window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
                     showFallbackIndicator: true,
-                    fallbackIndicatorText: 'Fallback',
+                    fallbackIndicatorText: '⚠️ Цвет',
                     onSuccess: (url, isFallback) => {
                         if (isFallback) {
                             img.classList.add('fallback-image');

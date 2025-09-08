@@ -64,17 +64,28 @@ class SplitView {
         const images = document.querySelectorAll('.cell-part-image[data-original-src]');
         images.forEach(img => {
             const originalSrc = img.dataset.originalSrc;
-            if (originalSrc && img.src !== originalSrc) {
-                // Если изображение не загрузилось, пробуем fallback
-                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
-                    showFallbackIndicator: true,
-                    fallbackIndicatorText: 'Fallback',
-                    onSuccess: (url, isFallback) => {
-                        if (isFallback) {
-                            img.classList.add('fallback-image');
-                        }
+            if (originalSrc) {
+                // Проверяем, загрузилось ли изображение
+                const testImg = new Image();
+                testImg.onload = () => {
+                    // Изображение загрузилось успешно
+                    if (img.src !== originalSrc) {
+                        img.src = originalSrc;
                     }
-                });
+                };
+                testImg.onerror = () => {
+                    // Изображение не загрузилось, пробуем fallback
+                    window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
+                        showFallbackIndicator: true,
+                        fallbackIndicatorText: '⚠️ Цвет',
+                        onSuccess: (url, isFallback) => {
+                            if (isFallback) {
+                                img.classList.add('fallback-image');
+                            }
+                        }
+                    });
+                };
+                testImg.src = originalSrc;
             }
         });
     }

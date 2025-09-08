@@ -88,9 +88,6 @@ class ContainerView {
         if (cellData) {
             cell.innerHTML = this.renderCellContent(cellData);
             
-            // Обрабатываем fallback изображения
-            this.handleCellImageFallbacks(cell);
-            
             // Добавляем класс для объединенных ячеек
             if (cellData.type === 'merged') {
                 cell.classList.add('merged');
@@ -108,6 +105,9 @@ class ContainerView {
         } else {
             cell.classList.add('empty');
         }
+        
+        // Обрабатываем fallback изображения для всех ячеек
+        this.handleCellImageFallbacks(cell);
 
         // Добавляем обработчики событий прямо при создании ячейки
         cell.addEventListener('click', (e) => {
@@ -198,7 +198,7 @@ class ContainerView {
             return `
                 <div class="cell-part">
                     <div class="part-image-container-small">
-                        ${part.image ? `<img src="${part.image}" alt="${part.name}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                        ${part.image ? `<img src="${part.image}" alt="${part.name}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';" data-original-src="${part.image}">` : ''}
                         <div class="part-image-placeholder-small" style="${part.image ? 'display: flex;' : ''}">
                             <div class="placeholder-icon-tiny">🧱</div>
                         </div>
@@ -355,6 +355,9 @@ class ContainerView {
 
         // Обработчики редактора
         this.setupCellEditorListeners(editor, cell, cellIndex);
+        
+        // Обрабатываем fallback изображения в редакторе
+        this.handleCellImageFallbacks(editor);
         
         // Закрытие по клику на фон
         modal.addEventListener('click', (e) => {
@@ -1024,7 +1027,7 @@ class ContainerView {
                     return `
                         <div class="existing-part-item" data-part-id="${item.partId}" data-color-id="${item.colorId}">
                             <div class="part-image-small">
-                                ${item.image ? `<img src="${item.image}" alt="${item.partId}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                                ${item.image ? `<img src="${item.image}" alt="${item.partId}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';" data-original-src="${item.image}">` : ''}
                                 <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
                                     <div class="placeholder-icon-small">🧱</div>
                                 </div>
@@ -1049,6 +1052,9 @@ class ContainerView {
                 // Переустанавливаем обработчики событий
                 const cell = document.querySelector(`[data-cell-index="${cellIndex}"]`);
                 this.setupExistingPartsListeners(editor, cell, cellIndex);
+                
+                // Обрабатываем fallback изображения в редакторе
+                this.handleCellImageFallbacks(editor);
                 
                 // Обновляем счетчик деталей в заголовке таба
                 this.updateTabCounter(editor, existingParts.length);
@@ -1401,7 +1407,7 @@ class ContainerView {
         if (window.imageLoader) {
             return window.imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
                 showFallbackIndicator: true,
-                fallbackIndicatorText: 'Fallback',
+                fallbackIndicatorText: '⚠️ Цвет',
                 onSuccess: (url, isFallback) => {
                     if (isFallback) {
                         imageElement.classList.add('fallback-image');
@@ -1497,17 +1503,28 @@ class ContainerView {
         const images = cell.querySelectorAll('img[data-original-src]');
         images.forEach(img => {
             const originalSrc = img.dataset.originalSrc;
-            if (originalSrc && img.src !== originalSrc) {
-                // Если изображение не загрузилось, пробуем fallback
-                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
-                    showFallbackIndicator: true,
-                    fallbackIndicatorText: 'Fallback',
-                    onSuccess: (url, isFallback) => {
-                        if (isFallback) {
-                            img.classList.add('fallback-image');
-                        }
+            if (originalSrc) {
+                // Проверяем, загрузилось ли изображение
+                const testImg = new Image();
+                testImg.onload = () => {
+                    // Изображение загрузилось успешно
+                    if (img.src !== originalSrc) {
+                        img.src = originalSrc;
                     }
-                });
+                };
+                testImg.onerror = () => {
+                    // Изображение не загрузилось, пробуем fallback
+                    window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
+                        showFallbackIndicator: true,
+                        fallbackIndicatorText: '⚠️ Цвет',
+                        onSuccess: (url, isFallback) => {
+                            if (isFallback) {
+                                img.classList.add('fallback-image');
+                            }
+                        }
+                    });
+                };
+                testImg.src = originalSrc;
             }
         });
     }

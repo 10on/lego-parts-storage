@@ -17,7 +17,7 @@ class ImageLoader {
     async loadImageWithFallback(originalUrl, imageElement, placeholderElement = null, options = {}) {
         const {
             showFallbackIndicator = true,
-            fallbackIndicatorText = 'Fallback',
+            fallbackIndicatorText = '⚠️ Цвет',
             onSuccess = null,
             onError = null
         } = options;
@@ -146,7 +146,7 @@ class ImageLoader {
      * @param {HTMLElement} imageElement - DOM элемент изображения
      * @param {string} text - Текст индикатора
      */
-    addFallbackIndicator(imageElement, text = 'Fallback') {
+    addFallbackIndicator(imageElement, text = '⚠️ Цвет') {
         // Удаляем существующий индикатор
         const existingIndicator = imageElement.parentElement.querySelector('.fallback-indicator');
         if (existingIndicator) {
