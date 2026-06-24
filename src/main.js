@@ -37,8 +37,6 @@ class LegoStorageApp {
             
             // Этап 2: Инициализация IndexedDB
             initProgress.updateStep(1, 0, 'Подключение к базе данных...');
-            this.imageManager = new ImageManager();
-            window.imageManager = this.imageManager;
             initProgress.updateStep(1, 50, 'База данных подключена');
             await new Promise(resolve => setTimeout(resolve, 100));
             initProgress.completeStep(1, 'База данных готова');
@@ -387,7 +385,7 @@ class LegoStorageApp {
         previewGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         previewGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
         previewGrid.style.backgroundColor = color;
-        previewGrid.style.border = `2px solid ${this.darkenColor(color, 20)}`;
+        previewGrid.style.border = `2px solid ${Utils.darkenColor(color, 20)}`;
         
         // Создаем ячейки
         for (let i = 0; i < rows * cols; i++) {
@@ -401,17 +399,6 @@ class LegoStorageApp {
         }
     }
     
-    darkenColor(color, percent) {
-        const num = parseInt(color.replace("#", ""), 16);
-        const amt = Math.round(2.55 * percent);
-        const R = (num >> 16) - amt;
-        const G = (num >> 8 & 0x00FF) - amt;
-        const B = (num & 0x0000FF) - amt;
-        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
-    }
-
     async createContainer() {
         const name = document.getElementById('container-name').value;
         const type = document.getElementById('container-type').value;

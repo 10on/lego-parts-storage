@@ -23,51 +23,18 @@ class EventManager {
     }
 
     handleKeyboardShortcuts(e) {
-        // Игнорируем если фокус на input/textarea
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            return;
-        }
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         switch (e.key) {
-            case '/':
-                e.preventDefault();
-                this.focusSearch();
-                break;
-                
             case 'Escape':
                 this.handleEscape();
                 break;
-                
             case 'Enter':
                 if (e.ctrlKey || e.metaKey) {
                     e.preventDefault();
                     this.handleCtrlEnter();
                 }
                 break;
-        }
-
-        // Комбинации клавиш
-        if (e.altKey) {
-            switch (e.key) {
-                case 'ArrowRight':
-                    e.preventDefault();
-                    this.handleAltArrowRight();
-                    break;
-            }
-        }
-
-        if (e.shiftKey) {
-            switch (e.key) {
-                case 'ArrowRight':
-                    e.preventDefault();
-                    this.handleShiftArrowRight();
-                    break;
-            }
-        }
-
-        if (e.key === 'x' || e.key === 'X') {
-            e.preventDefault();
-            this.handleSwapCells();
         }
     }
 
@@ -92,12 +59,6 @@ class EventManager {
         }
     }
 
-    // Обработчики горячих клавиш
-    focusSearch() {
-        // Поиск будет реализован позже
-        console.log('🔍 Фокус на поиск');
-    }
-
     handleEscape() {
         // Закрытие модальных окон и редакторов
         if (window.app) {
@@ -112,28 +73,12 @@ class EventManager {
     }
 
     handleCtrlEnter() {
-        // Сохранение текущих изменений
         if (window.app) {
             const currentView = window.app.getCurrentView();
             if (currentView === 'container') {
-                window.app.containerView.save();
+                window.app.containerView.saveContainer();
             }
         }
-    }
-
-    handleAltArrowRight() {
-        // Копирование элемента
-        console.log('📋 Копирование элемента');
-    }
-
-    handleShiftArrowRight() {
-        // Перемещение элемента
-        console.log('↔️ Перемещение элемента');
-    }
-
-    handleSwapCells() {
-        // Обмен ячеек
-        console.log('🔄 Обмен ячеек');
     }
 
     // Регистрация обработчиков событий
@@ -163,5 +108,4 @@ class EventManager {
     }
 }
 
-// Создаем глобальный экземпляр менеджера событий
-window.eventManager = new EventManager();
+new EventManager();

@@ -178,28 +178,6 @@ class LCXIndexedDBAdapter {
     }
 
     /**
-     * Массовое сохранение данных
-     */
-    async saveBulkData(store, data) {
-        const batchSize = 1000;
-        
-        for (let i = 0; i < data.length; i += batchSize) {
-            const batch = data.slice(i, i + batchSize);
-            await Promise.all(batch.map(item => {
-                return new Promise((resolve, reject) => {
-                    const request = store.add(item);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-            }));
-            
-            if (i % 5000 === 0 && i > 0) {
-                console.log(`📦 Processed ${i}/${data.length} items...`);
-            }
-        }
-    }
-
-    /**
      * Массовое сохранение данных с отслеживанием прогресса
      */
     async saveBulkDataWithProgress(storeName, data, progressCallback) {
@@ -231,13 +209,10 @@ class LCXIndexedDBAdapter {
             
             processedItems += batch.length;
             
-            // Обновляем прогресс с более детальной информацией
             const progress = Math.min(100, Math.round((processedItems / totalItems) * 100));
             if (progressCallback) {
                 const stepNumber = this.getStepNumberForStore(storeName);
                 const dataTypeName = this.getDataTypeName(storeName);
-                // Исправляем передачу параметров: step, percent, message
-                console.log(`📊 Progress callback: Step ${stepNumber}, Progress ${progress}%, Store: ${storeName}, Processed: ${processedItems}/${totalItems}`);
                 progressCallback(stepNumber, progress, `${dataTypeName}: сохранено ${processedItems} из ${totalItems} записей`);
             }
             
@@ -474,24 +449,6 @@ class LCXIndexedDBAdapter {
     }
 
     /**
-     * Получить связи деталь-цвет
-     */
-    async getPartColors(partId) {
-        if (!this.db.objectStoreNames.contains('partColors')) {
-            return [];
-        }
-
-        const transaction = this.db.transaction(['partColors'], 'readonly');
-        const store = transaction.objectStore('partColors');
-        const index = store.index('partId');
-        
-        return new Promise((resolve) => {
-            const request = index.getAll(partId);
-            request.onsuccess = () => resolve(request.result || []);
-        });
-    }
-
-    /**
      * Получить расширенную статистику
      */
     async getStats() {
@@ -644,12 +601,12 @@ class LCXIndexedDBAdapter {
             if (progressCallback) progressCallback(1, 15, `Размер файла: ${Math.round(totalSize / 1024)} KB`);
             
             // Чанковое скачивание
-            const compressedData = await this.downloadInChunks(response, progressCallback);
+            const compressedData = await LCXFileLoader.downloadInChunks(response, progressCallback);
             if (progressCallback) progressCallback(1, 100, 'Файл БД скачан');
-            
+
             // Шаг 2: Распаковка
             if (progressCallback) progressCallback(2, 5, 'Распаковка...');
-            const decompressedData = await this.decompressGzipWithProgress(compressedData, progressCallback);
+            const decompressedData = await LCXFileLoader.decompressGzip(compressedData, progressCallback);
             if (progressCallback) progressCallback(2, 100, 'Распаковка завершена');
             
             // Шаг 3: Обработка данных
@@ -667,158 +624,6 @@ class LCXIndexedDBAdapter {
             console.error('❌ Failed to load LCX file:', error);
             throw error;
         }
-    }
-
-    /**
-     * Чанковое скачивание файла с прогрессом
-     */
-    async downloadInChunks(response, progressCallback = null) {
-        const reader = response.body.getReader();
-        const chunks = [];
-        let receivedLength = 0;
-        const contentLength = response.headers.get('content-length');
-        const totalSize = contentLength ? parseInt(contentLength) : 0;
-        
-        let progressStep = 20; // Начинаем с 20% после получения размера
-        const progressIncrement = 5; // Обновляем каждые 5%
-        
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                
-                if (done) break;
-                
-                chunks.push(value);
-                receivedLength += value.length;
-                
-                // Обновляем прогресс каждые 5%
-                if (totalSize > 0) {
-                    const currentProgress = Math.floor((receivedLength / totalSize) * 75) + 20; // 20-95%
-                    if (currentProgress >= progressStep) {
-                        if (progressCallback) {
-                            progressCallback(1, currentProgress, 
-                                `Скачано: ${Math.round(receivedLength / 1024)} KB / ${Math.round(totalSize / 1024)} KB`);
-                        }
-                        progressStep += progressIncrement;
-                    }
-                } else {
-                    // Если размер неизвестен, обновляем каждые 50KB
-                    if (receivedLength % (50 * 1024) < value.length) {
-                        if (progressCallback) {
-                            progressCallback(1, Math.min(95, 20 + (receivedLength / 1024) * 0.1), 
-                                `Скачано: ${Math.round(receivedLength / 1024)} KB`);
-                        }
-                    }
-                }
-                
-                // Небольшая задержка для демонстрации прогресса
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
-            
-            // Объединяем все чанки
-            const result = new Uint8Array(receivedLength);
-            let position = 0;
-            for (const chunk of chunks) {
-                result.set(chunk, position);
-                position += chunk.length;
-            }
-            
-            return result;
-        } finally {
-            reader.releaseLock();
-        }
-    }
-
-    /**
-     * Распаковывает gzip данные с прогрессом
-     */
-    async decompressGzipWithProgress(compressedData, progressCallback = null) {
-        const stream = new DecompressionStream('gzip');
-        const writer = stream.writable.getWriter();
-        const reader = stream.readable.getReader();
-        
-        // Записываем сжатые данные
-        writer.write(compressedData);
-        writer.close();
-        
-        // Читаем распакованные данные с прогрессом
-        const chunks = [];
-        let done = false;
-        let totalDecompressed = 0;
-        let progressStep = 10;
-        const progressIncrement = 5;
-        
-        while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-            
-            if (value) {
-                chunks.push(value);
-                totalDecompressed += value.length;
-                
-                // Обновляем прогресс каждые 5%
-                const currentProgress = Math.min(95, 10 + (totalDecompressed / 1024) * 0.1);
-                if (currentProgress >= progressStep) {
-                    if (progressCallback) {
-                        progressCallback(2, currentProgress, 
-                            `Распаковано: ${Math.round(totalDecompressed / 1024)} KB`);
-                    }
-                    progressStep += progressIncrement;
-                }
-                
-                // Небольшая задержка для демонстрации прогресса
-                await new Promise(resolve => setTimeout(resolve, 5));
-            }
-        }
-        
-        // Объединяем чанки в строку
-        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-        
-        for (const chunk of chunks) {
-            result.set(chunk, offset);
-            offset += chunk.length;
-        }
-        
-        return new TextDecoder().decode(result);
-    }
-
-    /**
-     * Распаковывает gzip данные (старый метод для совместимости)
-     */
-    async decompressGzip(compressedData) {
-        const stream = new DecompressionStream('gzip');
-        const writer = stream.writable.getWriter();
-        const reader = stream.readable.getReader();
-        
-        // Записываем сжатые данные
-        writer.write(compressedData);
-        writer.close();
-        
-        // Читаем распакованные данные
-        const chunks = [];
-        let done = false;
-        
-        while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-            if (value) {
-                chunks.push(value);
-            }
-        }
-        
-        // Объединяем чанки в строку
-        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-        
-        for (const chunk of chunks) {
-            result.set(chunk, offset);
-            offset += chunk.length;
-        }
-        
-        return new TextDecoder().decode(result);
     }
 
     /**
@@ -1098,11 +903,6 @@ class LCXIndexedDBAdapter {
         });
     }
 
-    // Методы совместимости для старого API
-    async loadFromCSV() {
-        console.log('📦 CSV loading not supported in LCX adapter, use loadFromLCX instead');
-        return;
-    }
 }
 
 // Экспортируем класс

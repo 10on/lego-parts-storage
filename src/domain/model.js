@@ -1,7 +1,7 @@
 // Доменная модель приложения
 class LegoPart {
     constructor(data) {
-        this.id = data.id || this.generateId();
+        this.id = data.id || Utils.generateId();
         this.partId = data.partId;
         this.name = data.name;
         this.color = data.color;
@@ -9,10 +9,6 @@ class LegoPart {
         this.quantity = data.quantity !== undefined ? data.quantity : null;
         this.image = data.image;
         this.lastUpdated = data.lastUpdated || new Date().toISOString();
-    }
-
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
     updateQuantity(newQuantity) {
@@ -69,7 +65,7 @@ class LegoPart {
 
 class Container {
     constructor(data) {
-        this.id = data.id || this.generateId();
+        this.id = data.id || Utils.generateId();
         this.name = data.name;
         this.type = data.type; // 'cabinet', 'box', 'pile'
         this.rows = data.rows || 1;
@@ -77,10 +73,6 @@ class Container {
         this.cells = data.cells || this.initializeCells();
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
-    }
-
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
     initializeCells() {
@@ -324,7 +316,7 @@ class Container {
                     clonedCell.cellCount = cell.cellCount;
                     clonedCell.items = cell.items ? cell.items.map(item => ({
                         ...item,
-                        id: Date.now().toString(36) + Math.random().toString(36).substr(2) // Новый ID для каждого элемента
+                        id: Utils.generateId()
                     })) : [];
                 }
 
@@ -464,81 +456,5 @@ class DuplicateFinder {
 
     filterDuplicates(groups) {
         return Array.from(groups.values()).filter(group => group.items.length > 1);
-    }
-}
-
-class PartCatalog {
-    constructor() {
-        this.parts = new Map();
-        this.init();
-    }
-
-    init() {
-        // Загружаем базовый каталог
-        this.loadBasicCatalog();
-    }
-
-    loadBasicCatalog() {
-        const basicParts = [
-            {
-                partId: '3001',
-                name: 'Brick 2x4',
-                category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/4/3001.png',
-                colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
-            },
-            {
-                partId: '3002',
-                name: 'Brick 2x3',
-                category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/1/3002.png',
-                colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
-            },
-            {
-                partId: '3003',
-                name: 'Brick 2x2',
-                category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/3/3003.png',
-                colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
-            },
-            {
-                partId: '3004',
-                name: 'Brick 1x2',
-                category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/2/3004.png',
-                colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
-            },
-            {
-                partId: '3005',
-                name: 'Brick 1x1',
-                category: 'Bricks',
-                image: 'https://img.bricklink.com/ItemImage/PN/1/3005.png',
-                colors: ['Red', 'Blue', 'Yellow', 'Green', 'White', 'Black']
-            }
-        ];
-        
-        basicParts.forEach(part => {
-            this.parts.set(part.partId, part);
-        });
-    }
-
-    getPart(partId) {
-        return this.parts.get(partId);
-    }
-
-    searchParts(query) {
-        const lowerQuery = query.toLowerCase();
-        return Array.from(this.parts.values()).filter(part =>
-            part.name.toLowerCase().includes(lowerQuery) ||
-            part.partId.toLowerCase().includes(lowerQuery)
-        );
-    }
-
-    getPartsByCategory(category) {
-        return Array.from(this.parts.values()).filter(part => part.category === category);
-    }
-
-    addPart(part) {
-        this.parts.set(part.partId, part);
     }
 }

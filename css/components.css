@@ -1,0 +1,427 @@
+/* Color Picker */
+.color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.color-picker {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    padding: 0;
+}
+
+.color-input {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+}
+
+.color-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.preview-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.preview-grid {
+    display: grid;
+    gap: 1px;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.preview-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.5rem;
+    color: var(--text-muted);
+}
+
+/* Container Visualization */
+.container-visualization {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+}
+
+.container-grid-preview {
+    display: grid;
+    gap: 1px;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    width: 180px;
+    height: 120px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.preview-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: bold;
+    min-height: 1rem;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background-color: #f5f5f5 !important;
+}
+
+.preview-cell.filled {
+    color: #666;
+    background-color: #f5f5f5 !important;
+}
+
+.preview-cell.empty {
+    background-color: #f5f5f5 !important;
+}
+
+/* Стили для заглушки куч */
+.container-pile-preview {
+    width: 180px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--border-radius);
+    margin: 0 auto;
+}
+
+.pile-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.pile-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.pile-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* Container Cards - дополнительные стили */
+.container-card:hover .container-grid-preview,
+.container-card:hover .container-pile-preview {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .view-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .view-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .containers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .color-picker-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .color-picker {
+        align-self: center;
+    }
+}
+
+/* Стили для неактивных элементов настроек */
+.setting-disabled-note {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: var(--border-radius);
+    color: #856404;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.form-select:disabled,
+.form-input:disabled,
+input[type="checkbox"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+
+.btn:disabled:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+    transform: none;
+    box-shadow: none;
+}
+
+.checkbox-label:has(input:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.checkbox-label:has(input:disabled) .checkbox-text {
+    color: var(--text-muted);
+}
+
+/* Стили для объединенных ячеек в редакторе */
+.merged-cell-info {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.merged-cell-info h5 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.merged-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.merged-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--border-radius) * 0.5);
+    font-size: 0.85rem;
+}
+
+.merged-item .item-part {
+    font-weight: 600;
+    color: var(--primary-color);
+    min-width: 60px;
+}
+
+.merged-item .item-name {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.merged-item .item-color {
+    color: var(--text-secondary);
+    min-width: 80px;
+}
+
+.merged-item .item-quantity {
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Стили для ограниченного выбора цветов */
+.color-restriction-info {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--border-radius) * 0.5);
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.color-restriction-info small {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.color-restriction-info small::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--info-color);
+    flex-shrink: 0;
+}
+
+.color-restriction-info small:has-text("✅")::before {
+    background-color: var(--success-color);
+}
+
+.color-restriction-info small:has-text("❌")::before {
+    background-color: var(--danger-color);
+}
+
+.color-restriction-info small:has-text("⚠️")::before {
+    background-color: var(--warning-color);
+}
+
+/* Стили для отключенного поля цвета */
+.form-input:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.form-input:disabled::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+/* Улучшенные стили для автодополнения цветов */
+.autocomplete-container .color-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.autocomplete-container .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-container .color-item .item-label {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* Анимация для загрузки цветов */
+@keyframes color-loading {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.color-restriction-info.loading small {
+    animation: color-loading 1.5s ease-in-out infinite;
+}
+
+/* Стили для успешной загрузки */
+.color-restriction-info.success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-color: var(--success-color);
+}
+
+.color-restriction-info.error {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: var(--danger-color);
+}
+
+.color-restriction-info.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-color: var(--warning-color);
+}
+
+/* Стили для fallback изображений */
+.fallback-indicator {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: rgba(13, 110, 253, 0.9);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* Эффекты для fallback изображений */
+img.fallback-image {
+    filter: grayscale(20%) contrast(0.9) brightness(1.1);
+    opacity: 0.85;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    transition: all 0.3s ease;
+}
+
+img.fallback-image:hover {
+    filter: grayscale(10%) contrast(0.95) brightness(1.05);
+    opacity: 0.9;
+}
+
+/* Стили для изображений в ячейках с fallback */
+.cell-image.fallback-image,
+.cell-image-small.fallback-image,
+.part-thumbnail.fallback-image,
+.pile-item-image.fallback-image,
+.cell-part-image.fallback-image {
+    position: relative;
+}
+
+.cell-image.fallback-image::after,
+.cell-image-small.fallback-image::after,
+.part-thumbnail.fallback-image::after,
+.pile-item-image.fallback-image::after,
+.cell-part-image.fallback-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 48%, rgba(255, 193, 7, 0.1) 50%, transparent 52%);
+    pointer-events: none;
+}

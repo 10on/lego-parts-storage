@@ -108,7 +108,7 @@ class HomeView {
 
     renderContainerGrid(container, color) {
         const { rows, cols, cells, type } = container;
-        const borderColor = this.darkenColor(color, 20);
+        const borderColor = Utils.darkenColor(color, 20);
         
         // Для куч показываем заглушку вместо сетки
         if (type === 'pile') {
@@ -142,7 +142,7 @@ class HomeView {
                 gridHtml += `
                     <div class="preview-cell ${isFilled ? 'filled' : 'empty'}" 
                          style="background-color: ${isFilled ? '#f5f5f5' : '#f5f5f5'};
-                                border: 1px solid ${this.darkenColor(color, 10)};">
+                                border: 1px solid ${Utils.darkenColor(color, 10)};">
                         ${isFilled ? '●' : ''}
                     </div>
                 `;
@@ -154,17 +154,6 @@ class HomeView {
         return gridHtml;
     }
     
-    darkenColor(color, percent) {
-        const num = parseInt(color.replace("#", ""), 16);
-        const amt = Math.round(2.55 * percent);
-        const R = (num >> 16) - amt;
-        const G = (num >> 8 & 0x00FF) - amt;
-        const B = (num & 0x0000FF) - amt;
-        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
-    }
-
     getTypeDescription(type) {
         const descriptions = {
             'cabinet': 'Кассетница для систематического хранения деталей',
@@ -391,15 +380,7 @@ class HomeView {
                 return;
             }
 
-            // Создаем клонированный контейнер
-            let clonedContainer;
-            if (originalContainer && typeof originalContainer.clone === 'function') {
-                // Если это экземпляр класса Container
-                clonedContainer = originalContainer.clone(includeContent);
-            } else {
-                // Если это обычный объект, создаем клон вручную
-                clonedContainer = this.cloneContainerData(originalContainer, includeContent);
-            }
+            const clonedContainer = originalContainer.clone(includeContent);
             
             if (clonedContainer) {
                 // Добавляем клонированный контейнер в массив
@@ -423,54 +404,6 @@ class HomeView {
                 window.app.showNotification('Ошибка при клонировании контейнера', 'error');
             }
         }
-    }
-
-    cloneContainerData(originalContainer, includeContent = false) {
-        const clonedContainer = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-            name: `${originalContainer.name} (копия)`,
-            type: originalContainer.type,
-            rows: originalContainer.rows,
-            cols: originalContainer.cols,
-            color: originalContainer.color,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (includeContent && originalContainer.cells) {
-            // Глубокое копирование ячеек с содержимым
-            clonedContainer.cells = originalContainer.cells.map(cell => {
-                if (!cell) return null;
-                
-                // Копируем структуру ячейки
-                const clonedCell = {
-                    type: cell.type,
-                    partId: cell.partId,
-                    name: cell.name,
-                    color: cell.color,
-                    colorId: cell.colorId,
-                    quantity: cell.quantity,
-                    image: cell.image,
-                    lastUpdated: cell.lastUpdated
-                };
-
-                // Если это объединенная ячейка, копируем дополнительные свойства
-                if (cell.type === 'merged') {
-                    clonedCell.cellCount = cell.cellCount;
-                    clonedCell.items = cell.items ? cell.items.map(item => ({
-                        ...item,
-                        id: Date.now().toString(36) + Math.random().toString(36).substr(2) // Новый ID для каждого элемента
-                    })) : [];
-                }
-
-                return clonedCell;
-            });
-        } else {
-            // Создаем пустую сетку того же размера
-            clonedContainer.cells = Array(originalContainer.rows * originalContainer.cols).fill(null);
-        }
-
-        return clonedContainer;
     }
 
     async deleteContainer(containerId) {
