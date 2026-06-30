@@ -203,21 +203,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: auto;
-    height: 100%;
+    flex: 1 1 0;
+    min-width: 0;
     padding: 0.0625rem;
     border-radius: 2px;
     background-color: rgba(255, 255, 255, 0.1);
     transition: background-color 0.2s ease;
-    flex-shrink: 0;
-    min-width: 0;
 }
 
 .part-image-container-small {
     position: relative;
-    width: auto;
-    height: 100%;
-    flex-shrink: 0;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -526,8 +524,8 @@
 
 /* Drag & Drop */
 .grid-cell.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg);
+    opacity: 0.4;
+    outline: 2px dashed var(--primary-color);
 }
 
 .grid-cell.drop-target {

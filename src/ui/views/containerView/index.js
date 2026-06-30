@@ -62,10 +62,7 @@ class ContainerView {
         this.renderer.handleCellImageFallbacks(cell);
         cell.addEventListener('click', (e) => this.handleCellClick(e, cell));
         cell.addEventListener('dblclick', (e) => this.handleCellDoubleClick(e, cell));
-
-        if (cellData && cellData.items && cellData.items.length > 0) {
-            this.dragDrop.setupCellDragDrop(cell, cellData, index);
-        }
+        this.dragDrop.setupCellDragDrop(cell, index);
 
         return cell;
     }

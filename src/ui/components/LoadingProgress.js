@@ -1,304 +1,189 @@
-/**
- * LoadingProgress Component
- * Компонент для отображения прогресса загрузки данных с детализацией по этапам
- */
-
 class LoadingProgress {
     constructor() {
         this.isVisible = false;
         this.currentStep = 0;
         this.totalSteps = 0;
         this.stepDetails = [];
+        this.stepProgress = [];
         this.onCancel = null;
     }
 
-    /**
-     * Показать экран загрузки
-     */
     show(steps, options = {}) {
         this.stepDetails = steps;
         this.totalSteps = steps.length;
         this.currentStep = 0;
+        this.stepProgress = new Array(steps.length).fill(0);
         this.onCancel = options.onCancel || null;
-        
-        this.createProgressModal();
+
+        this._createModal();
         this.isVisible = true;
-        
-        console.log('🔄 Loading progress started:', steps.map(s => s.title));
-        
-        // Возвращаем this для цепочки вызовов
+        this._render();
         return this;
     }
 
-    /**
-     * Скрыть экран загрузки
-     */
     hide() {
         const modal = document.getElementById('loading-progress-modal');
         if (modal) {
-            modal.classList.remove('show');
-            modal.classList.add('hide');
-            setTimeout(() => {
-                if (modal.parentNode) {
-                    modal.remove();
-                }
-            }, 300);
+            modal.classList.add('lp-hide');
+            setTimeout(() => modal.remove(), 300);
         }
         this.isVisible = false;
-        console.log('✅ Loading progress completed');
     }
 
-    /**
-     * Обновить прогресс текущего шага
-     */
     updateStep(stepIndex, progress, details = '') {
         if (!this.isVisible) return;
-
         this.currentStep = stepIndex;
-        
-        // Добавляем отладочную информацию
-        console.log(`🔄 Progress update: Step ${stepIndex}, Progress ${progress}%, Details: ${details}`);
-        
-        // Плавно обновляем прогресс
-        this.renderCurrentStep(stepIndex, progress, details);
+        this.stepProgress[stepIndex] = Math.min(100, Math.max(0, progress));
+        this._currentDetails = details;
+        this._render();
     }
 
-    /**
-     * Рендер текущего шага
-     */
-    renderCurrentStep(stepIndex, progress, details = '') {
-        const container = document.getElementById('current-step-container');
-        if (!container) return;
-
-        const step = this.stepDetails[stepIndex];
-        if (!step) return;
-
-        const isCompleted = progress >= 100;
-        const stepClass = isCompleted ? 'completed' : 'active';
-        
-        // Проверяем, существует ли уже элемент прогресса
-        const existingStep = container.querySelector('.progress-step');
-        const existingProgressBar = container.querySelector('.progress-bar');
-        const shouldAnimate = existingProgressBar && progress > 0;
-        
-        // Если это новый шаг, создаем новый элемент
-        if (!existingStep || existingStep.dataset.stepIndex !== stepIndex.toString()) {
-            container.innerHTML = `
-                <div class="progress-step ${stepClass}" data-step-index="${stepIndex}">
-                    <div class="step-header">
-                        <div class="step-number">${stepIndex + 1}</div>
-                        <div class="step-info">
-                            <div class="step-title">${step.title}</div>
-                        </div>
-                    </div>
-                    <div class="step-progress">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar" style="width: ${Math.min(100, Math.max(0, progress))}%"></div>
-                            </div>
-                        </div>
-                        <div class="progress-details">${details || 'Ожидание...'}</div>
-                    </div>
-                </div>
-            `;
-        } else {
-            // Обновляем существующий элемент
-            const stepElement = container.querySelector('.progress-step');
-            const progressBar = container.querySelector('.progress-bar');
-            const progressDetails = container.querySelector('.progress-details');
-            
-            // Обновляем класс шага
-            stepElement.className = `progress-step ${stepClass}`;
-            
-            // Обновляем прогресс-бар с анимацией
-            if (progressBar) {
-                progressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
-            }
-            
-            // Обновляем детали
-            if (progressDetails) {
-                progressDetails.textContent = details || 'Ожидание...';
-            }
-        }
-        
-        // Добавляем анимацию для плавного перехода
-        if (shouldAnimate) {
-            const progressBar = container.querySelector('.progress-bar');
-            if (progressBar) {
-                progressBar.style.transition = 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-            }
-        }
+    completeStep(stepIndex, details = '') {
+        this.stepProgress[stepIndex] = 100;
+        this._currentDetails = details;
+        this._render();
     }
 
-    /**
-     * Завершить текущий шаг
-     */
-    completeStep(stepIndex, details = 'Завершено') {
-        this.updateStep(stepIndex, 100, details);
-        
-        // Автоматически переходим к следующему шагу
-        if (stepIndex < this.totalSteps - 1) {
-            setTimeout(() => {
-                this.updateStep(stepIndex + 1, 0, 'Начинаем...');
-            }, 500);
-        }
-    }
-
-    /**
-     * Показать ошибку на определенном шаге
-     */
     showError(stepIndex, errorMessage) {
-        this.renderCurrentStep(stepIndex, 0, `❌ ${errorMessage}`);
-        
-        // Обновляем класс контейнера для ошибки
-        const container = document.getElementById('current-step-container');
-        if (container) {
-            const stepElement = container.querySelector('.progress-step');
-            if (stepElement) {
-                stepElement.className = 'progress-step error';
-            }
-        }
+        if (!this.isVisible) return;
+        this._errorMessage = errorMessage;
+        this._render();
     }
 
+    // --- private ---
 
-    /**
-     * Создать модальное окно прогресса
-     */
-    createProgressModal() {
-        const existingModal = document.getElementById('loading-progress-modal');
-        if (existingModal) {
-            existingModal.remove();
+    _overallPercent() {
+        if (this.totalSteps === 0) return 0;
+        let done = 0;
+        for (let i = 0; i < this.totalSteps; i++) {
+            done += this.stepProgress[i] / 100;
         }
+        return Math.round((done / this.totalSteps) * 100);
+    }
+
+    _render() {
+        const pct = this._overallPercent();
+
+        const bar = document.getElementById('lp-bar-fill');
+        if (bar) bar.style.width = `${pct}%`;
+
+        const pctLabel = document.getElementById('lp-percent');
+        if (pctLabel) pctLabel.textContent = `${pct}%`;
+
+        const stepLabel = document.getElementById('lp-stage-label');
+        if (stepLabel) {
+            const step = this.stepDetails[this.currentStep];
+            stepLabel.textContent = step ? step.title : '';
+        }
+
+        const details = document.getElementById('lp-details');
+        if (details) {
+            if (this._errorMessage) {
+                details.textContent = `Ошибка: ${this._errorMessage}`;
+                details.className = 'lp-details lp-details--error';
+            } else {
+                details.textContent = this._currentDetails || '';
+                details.className = 'lp-details';
+            }
+        }
+
+        const stages = document.getElementById('lp-stages');
+        if (!stages) return;
+
+        stages.querySelectorAll('.lp-stage').forEach((el, i) => {
+            const p = this.stepProgress[i] ?? 0;
+            el.className = 'lp-stage' +
+                (p >= 100 ? ' lp-stage--done' :
+                 i === this.currentStep ? ' lp-stage--active' :
+                 ' lp-stage--pending');
+
+            const icon = el.querySelector('.lp-stage-icon');
+            if (icon) icon.textContent = p >= 100 ? '✓' : i === this.currentStep ? '→' : String(i + 1);
+        });
+    }
+
+    _createModal() {
+        document.getElementById('loading-progress-modal')?.remove();
 
         const modal = document.createElement('div');
         modal.id = 'loading-progress-modal';
         modal.className = 'loading-progress-modal';
-        modal.innerHTML = this.renderProgressModal();
-
+        modal.innerHTML = this._html();
         document.body.appendChild(modal);
-        
-        // Добавляем обработчик кнопки отмены
-        const cancelBtn = document.getElementById('loading-cancel-btn');
-        if (cancelBtn && this.onCancel) {
-            cancelBtn.addEventListener('click', () => {
-                if (this.onCancel) {
-                    this.onCancel();
-                }
+
+        if (this.onCancel) {
+            document.getElementById('lp-cancel-btn')?.addEventListener('click', () => {
+                this.onCancel?.();
                 this.hide();
             });
         }
 
-        // Показываем модальное окно с анимацией
-        requestAnimationFrame(() => {
-            modal.classList.add('show');
-        });
+        requestAnimationFrame(() => modal.classList.add('lp-show'));
     }
 
-    /**
-     * Рендер HTML модального окна
-     */
-    renderProgressModal() {
-        const hasCancel = this.onCancel !== null;
-        
+    _html() {
+        const stagesHtml = this.stepDetails.map((step, i) => `
+            <div class="lp-stage lp-stage--pending">
+                <span class="lp-stage-icon">${i + 1}</span>
+                <span class="lp-stage-title">${step.title}</span>
+            </div>
+        `).join('');
+
+        const cancelBtn = this.onCancel
+            ? `<div class="lp-actions"><button id="lp-cancel-btn" class="btn btn-outline">Отменить</button></div>`
+            : '';
+
         return `
-            <div class="loading-progress-content">
-                <div class="loading-header">
-                    <h3>Загрузка данных</h3>
-                    <div class="loading-spinner"></div>
+            <div class="lp-content">
+                <div class="lp-header">
+                    <div class="lp-spinner"></div>
+                    <span class="lp-title">Загрузка данных</span>
+                    <span id="lp-percent" class="lp-percent">0%</span>
                 </div>
 
-                <div class="steps-container">
-                    <div id="current-step-container">
-                        <!-- Текущий шаг будет отображаться здесь -->
-                    </div>
+                <div class="lp-bar-track">
+                    <div id="lp-bar-fill" class="lp-bar-fill" style="width:0%"></div>
                 </div>
 
-                ${hasCancel ? `
-                    <div class="loading-actions">
-                        <button id="loading-cancel-btn" class="btn btn-outline">Отменить</button>
-                    </div>
-                ` : ''}
+                <div class="lp-stage-row">
+                    <span id="lp-stage-label" class="lp-stage-label"></span>
+                    <span id="lp-details" class="lp-details"></span>
+                </div>
+
+                <div id="lp-stages" class="lp-stages">${stagesHtml}</div>
+
+                ${cancelBtn}
             </div>
         `;
     }
 
-    /**
-     * Статический метод для быстрого создания прогресса загрузки LCX
-     */
     static createLCXProgress() {
         const steps = [
-            {
-                title: 'Инициализация базы данных',
-                description: 'Подготовка IndexedDB и создание таблиц'
-            },
-            {
-                title: 'Скачивание файла данных',
-                description: 'Загрузка LCX файла с сервера BrickLink'
-            },
-            {
-                title: 'Распаковка архива',
-                description: 'Извлечение данных из сжатого файла'
-            },
-            {
-                title: 'Парсинг JSON данных',
-                description: 'Обработка и валидация структуры данных'
-            },
-            {
-                title: 'Загрузка категорий',
-                description: 'Сохранение категорий деталей в базу'
-            },
-            {
-                title: 'Загрузка цветов',
-                description: 'Сохранение информации о цветах в базу'
-            },
-            {
-                title: 'Загрузка деталей',
-                description: 'Сохранение каталога деталей в базу'
-            },
-            {
-                title: 'Загрузка связей',
-                description: 'Сохранение связей деталь-цвет в базу'
-            },
-            {
-                title: 'Создание индексов',
-                description: 'Построение поисковых индексов для быстрого доступа'
-            },
-            {
-                title: 'Завершение',
-                description: 'Финализация и очистка временных данных'
-            }
+            { title: 'Инициализация базы данных' },
+            { title: 'Скачивание файла данных' },
+            { title: 'Распаковка архива' },
+            { title: 'Парсинг JSON' },
+            { title: 'Загрузка категорий' },
+            { title: 'Загрузка цветов' },
+            { title: 'Загрузка деталей' },
+            { title: 'Загрузка связей' },
+            { title: 'Создание индексов' },
+            { title: 'Завершение' },
         ];
-
         return new LoadingProgress().show(steps, {
-            onCancel: () => {
-                console.log('❌ Loading cancelled by user');
-                // Можно добавить логику отмены загрузки
-            }
+            onCancel: () => console.log('❌ Loading cancelled by user'),
         });
     }
 
-    /**
-     * Статический метод для создания прогресса инициализации приложения
-     */
     static createAppInitProgress() {
         const steps = [
-            {
-                title: 'Проверка локального хранилища'
-            },
-            {
-                title: 'Инициализация базы данных'
-            },
-            {
-                title: 'Загрузка каталога деталей'
-            },
-            {
-                title: 'Инициализация приложения'
-            }
+            { title: 'Проверка хранилища' },
+            { title: 'База данных' },
+            { title: 'Каталог деталей' },
+            { title: 'Интерфейс' },
         ];
-
         return new LoadingProgress().show(steps);
     }
 }
 
-// Экспортируем класс
 window.LoadingProgress = LoadingProgress;

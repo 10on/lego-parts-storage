@@ -1,33 +1,49 @@
 class CellDragDrop {
     constructor(containerView) {
         this.view = containerView;
+        this.dragSourceIndex = null;
     }
 
     get container() { return this.view.container; }
 
-    setupCellDragDrop(cell, cellData, index) {
+    setupCellDragDrop(cell, index) {
         cell.draggable = true;
-        cell.style.cursor = 'grab';
 
         cell.addEventListener('dragstart', (e) => {
-            const dragData = {
+            this.dragSourceIndex = index;
+            e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'cell',
                 containerId: this.container.id,
                 cellIndex: index,
-                cellData,
-                parts: cellData.items || [],
-                totalQuantity: cellData.items ? cellData.items.reduce((sum, item) => sum + item.quantity, 0) : 0
-            };
-            e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+            }));
             e.dataTransfer.effectAllowed = 'move';
-            cell.style.opacity = '0.5';
+            requestAnimationFrame(() => cell.classList.add('dragging'));
         });
 
-        cell.addEventListener('dragend', () => { cell.style.opacity = '1'; });
-        cell.addEventListener('dragenter', (e) => e.preventDefault());
-        cell.addEventListener('dragover', (e) => e.preventDefault());
+        cell.addEventListener('dragend', () => {
+            cell.classList.remove('dragging');
+            this.dragSourceIndex = null;
+            document.querySelectorAll('.grid-cell.drop-target').forEach(c => c.classList.remove('drop-target'));
+        });
+
+        cell.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (this.dragSourceIndex !== index) {
+                cell.classList.add('drop-target');
+            }
+        });
+
+        cell.addEventListener('dragleave', (e) => {
+            if (!cell.contains(e.relatedTarget)) {
+                cell.classList.remove('drop-target');
+            }
+        });
+
+        cell.addEventListener('dragover', (e) => { e.preventDefault(); });
+
         cell.addEventListener('drop', (e) => {
             e.preventDefault();
+            cell.classList.remove('drop-target');
             const data = e.dataTransfer.getData('application/json');
             if (!data) return;
             try {
@@ -43,7 +59,7 @@ class CellDragDrop {
         if (dropData.source === 'buffer') {
             this.handleBufferToCellDrop(dropData, targetCellIndex);
         } else {
-            this.handleCellToCellDrop(dropData, targetCellIndex);
+            this.handleCellSwap(dropData, targetCellIndex);
         }
     }
 
@@ -61,21 +77,18 @@ class CellDragDrop {
         window.app?.autoSave();
     }
 
-    handleCellToCellDrop(dropData, targetCellIndex) {
-        if (dropData.containerId === this.container.id && dropData.cellIndex === targetCellIndex) return;
-        const sourceCell = this.container.cells[dropData.cellIndex];
-        if (!sourceCell || !sourceCell.items) return;
+    handleCellSwap(dropData, targetCellIndex) {
+        if (dropData.containerId !== this.container.id) return;
+        if (dropData.cellIndex === targetCellIndex) return;
 
-        const targetCell = this.container.cells[targetCellIndex];
-        if (!targetCell) {
-            this.container.cells[targetCellIndex] = { type: 'single', items: [...sourceCell.items] };
-        } else {
-            if (!targetCell.items) targetCell.items = [];
-            targetCell.items.push(...sourceCell.items);
-        }
-        this.container.cells[dropData.cellIndex] = null;
+        const sourceIndex = dropData.cellIndex;
+        const sourceData = this.container.cells[sourceIndex] ?? null;
+        const targetData = this.container.cells[targetCellIndex] ?? null;
+
+        this.container.cells[sourceIndex] = targetData;
+        this.container.cells[targetCellIndex] = sourceData;
+
         this.view.renderGrid();
-        window.app?.showNotification('Содержимое перемещено между ячейками', 'success');
         window.app?.autoSave();
     }
 }
