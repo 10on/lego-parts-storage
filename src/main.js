@@ -122,24 +122,13 @@ class LegoStorageApp {
             const hasExistingProject = localStorage.getItem('lego-storage-project') !== null;
             
             if (project.containers && project.containers.length > 0) {
-                // Данные уже есть - загружаем их и создаем экземпляры класса Container
-                this.containers = project.containers.map(containerData => {
-                    try {
-                        // Конвертируем старый формат ячеек в новый
-                        if (containerData.cells) {
-                            containerData.cells = this.convertCellsToNewFormat(containerData.cells);
-                        }
-                        return new Container(containerData);
-                    } catch (error) {
-                        console.warn('Ошибка создания контейнера:', error, containerData);
-                        return containerData; // Возвращаем как есть, если не удалось создать
-                    }
-                });
+                // Данные уже есть - загружаем их (формат ячеек мигрирует в Container)
+                this.containers = project.containers.map(Container.from);
                 this.pileItems = project.pileItems || [];
                 console.log('📦 Загружены данные из LocalStorage:', this.containers.length, 'контейнеров');
             } else if (!hasExistingProject) {
                 // Совсем новый пользователь (никогда не было localStorage) - создаем тестовые данные
-                this.containers = this.mockData.getContainers();
+                this.containers = this.mockData.getContainers().map(Container.from);
                 this.pileItems = this.mockData.getPileItems();
                 
                 // Сохраняем тестовые данные в LocalStorage
@@ -158,7 +147,7 @@ class LegoStorageApp {
             
             if (!hasAnyData) {
                 // Если совсем ничего нет - создаем тестовые данные
-                this.containers = this.mockData.getContainers();
+                this.containers = this.mockData.getContainers().map(Container.from);
                 this.pileItems = this.mockData.getPileItems();
                 console.log('🔧 Ошибка загрузки + нет данных: созданы тестовые данные');
             } else {
@@ -406,17 +395,7 @@ class LegoStorageApp {
         const cols = parseInt(document.getElementById('grid-cols').value);
         const color = document.getElementById('container-color').value;
         
-        const container = {
-            id: Date.now().toString(),
-            name,
-            type,
-            rows,
-            cols,
-            color,
-            cells: Array(rows * cols).fill(null),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        const container = new Container({ name, type, rows, cols, color });
         
         this.containers.push(container);
         this.hideModal();
@@ -431,15 +410,7 @@ class LegoStorageApp {
     async saveProject() {
         try {
             const project = {
-                containers: this.containers.map(container => {
-                    // Проверяем, является ли контейнер экземпляром класса Container
-                    if (container && typeof container.toJSON === 'function') {
-                        return container.toJSON();
-                    } else {
-                        // Если это обычный объект, возвращаем его как есть
-                        return container;
-                    }
-                }),
+                containers: this.containers.map(container => container.toJSON()),
                 pileItems: this.pileItems,
                 settings: {
                     storageAdapter: 'local',
@@ -463,14 +434,7 @@ class LegoStorageApp {
     async loadProject() {
         try {
             const project = await this.storage.loadProject();
-            this.containers = (project.containers || []).map(containerData => {
-                try {
-                    return new Container(containerData);
-                } catch (error) {
-                    console.warn('Ошибка создания контейнера:', error, containerData);
-                    return containerData; // Возвращаем как есть, если не удалось создать
-                }
-            });
+            this.containers = (project.containers || []).map(Container.from);
             this.pileItems = project.pileItems || [];
             console.log('📦 Проект загружен из LocalStorage');
             return true;
@@ -490,35 +454,6 @@ class LegoStorageApp {
         this.autoSaveTimeout = setTimeout(async () => {
             await this.saveProject();
         }, 1000); // Сохраняем через 1 секунду после последнего изменения
-    }
-
-    convertCellsToNewFormat(cells) {
-        return cells.map(cell => {
-            if (cell === null) {
-                return null;
-            }
-            
-            // Если уже новый формат - возвращаем как есть
-            if (cell.items && Array.isArray(cell.items)) {
-                return cell;
-            }
-            
-            // Если старый формат - конвертируем в новый
-            if (cell.partId) {
-                return {
-                    items: [{
-                        partId: cell.partId,
-                        colorId: cell.colorId,
-                        quantity: cell.quantity,
-                        image: cell.image,
-                        lastUpdated: cell.lastUpdated || new Date().toISOString()
-                    }]
-                };
-            }
-            
-            // Неизвестный формат - возвращаем как есть
-            return cell;
-        });
     }
 
     showNotification(message, type = 'info') {

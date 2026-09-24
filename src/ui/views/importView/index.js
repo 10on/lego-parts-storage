@@ -216,7 +216,7 @@ class ImportView {
         if (overwrite) {
             // Перезаписываем все данные
             if (actualData.containers) {
-                window.app.containers = actualData.containers;
+                window.app.containers = actualData.containers.map(Container.from);
             }
             if (actualData.pileItems) {
                 window.app.pileItems = actualData.pileItems;
@@ -224,7 +224,7 @@ class ImportView {
         } else {
             // Добавляем к существующим данным
             if (actualData.containers) {
-                window.app.containers.push(...actualData.containers);
+                window.app.containers.push(...actualData.containers.map(Container.from));
             }
             if (actualData.pileItems) {
                 window.app.pileItems.push(...actualData.pileItems);
