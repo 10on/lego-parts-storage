@@ -56,25 +56,7 @@ class CellDragDrop {
 
     handleCellDrop(dropData, targetCellIndex) {
         if (dropData.type !== 'cell') return;
-        if (dropData.source === 'buffer') {
-            this.handleBufferToCellDrop(dropData, targetCellIndex);
-        } else {
-            this.handleCellSwap(dropData, targetCellIndex);
-        }
-    }
-
-    handleBufferToCellDrop(dropData, targetCellIndex) {
-        const targetCell = this.container.cells[targetCellIndex];
-        if (!targetCell) {
-            this.container.cells[targetCellIndex] = { type: 'single', items: dropData.parts };
-        } else {
-            if (!targetCell.items) targetCell.items = [];
-            targetCell.items.push(...dropData.parts);
-        }
-        this.view.renderGrid();
-        window.app?.views?.split?.removeFromBuffer(dropData.bufferIndex);
-        window.app?.showNotification('Содержимое перемещено из буфера', 'success');
-        window.app?.autoSave();
+        this.handleCellSwap(dropData, targetCellIndex);
     }
 
     handleCellSwap(dropData, targetCellIndex) {
