@@ -235,7 +235,7 @@
     object-fit: contain !important;
     object-position: center !important;
     border-radius: 2px;
-    display: block !important;
+    display: block; /* без !important: обработчики ошибок скрывают битые картинки через style.display */
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
@@ -287,7 +287,7 @@
     object-fit: contain !important;
     object-position: center !important;
     border-radius: 2px;
-    display: block !important;
+    display: block; /* без !important: см. .cell-image-small */
     margin: auto !important;
     position: absolute !important;
     top: 50% !important;
