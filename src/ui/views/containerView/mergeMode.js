@@ -1,4 +1,4 @@
-class MergeMode {
+export class MergeMode {
     constructor(containerView) {
         this.view = containerView;
         this.isMergeMode = false;

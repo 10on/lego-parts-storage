@@ -1,5 +1,11 @@
+import { brickLinkData } from '../../../data/bricklink.js';
+import { LCXIndexedDBAdapter } from '../../../data/lcx-indexeddb-adapter.js';
+import { Container } from '../../../domain/model.js';
+import { LoadingProgress } from '../../components/LoadingProgress.js';
+import { esc } from '../../../utils/index.js';
+
 // Вид импорта и экспорта данных
-class ImportView {
+export class ImportView {
     constructor() {
         this.importHistory = [];
     }
@@ -282,8 +288,8 @@ class ImportView {
 
         try {
             // Создаем LCX адаптер если его нет
-            if (!window.lcxAdapter) {
-                window.lcxAdapter = new LCXIndexedDBAdapter();
+            if (!this.lcxAdapter) {
+                this.lcxAdapter = new LCXIndexedDBAdapter();
             }
 
             // Создаем временный файл для парсера
@@ -291,7 +297,7 @@ class ImportView {
             lcxBlob.name = 'imported.lcx.json';
 
             // Загружаем LCX данные с прогрессом
-            const stats = await window.lcxAdapter.loadFromLCX(lcxBlob, (stepIndex, progressPercent, details) => {
+            const stats = await this.lcxAdapter.loadFromLCX(lcxBlob, (stepIndex, progressPercent, details) => {
                 progress.updateStep(stepIndex, progressPercent, details);
             });
             
@@ -299,9 +305,9 @@ class ImportView {
             progress.completeStep(6, `Загружено: ${stats.parts} деталей, ${stats.colors} цветов`);
             
             // Обновляем BrickLink данные в приложении
-            if (window.brickLinkData) {
-                window.brickLinkData.dbAdapter = window.lcxAdapter;
-                window.brickLinkData.isLoaded = true;
+            if (brickLinkData) {
+                brickLinkData.dbAdapter = this.lcxAdapter;
+                brickLinkData.isLoaded = true;
             }
 
             console.log('✅ LCX data imported successfully:', stats);

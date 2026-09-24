@@ -1,4 +1,9 @@
-class CellEditor {
+import { AutoComplete } from '../../../components/autocomplete.js';
+import { brickLinkData } from '../../../data/bricklink.js';
+import { imageLoader } from '../../../utils/imageLoader.js';
+import { esc } from '../../../utils/index.js';
+
+export class CellEditor {
     constructor(containerView) {
         this.view = containerView;
         this.partAutocomplete = null;
@@ -33,7 +38,7 @@ class CellEditor {
         cell.classList.add('editing');
 
         this.setupCellEditorListeners(editor, cell, cellIndex);
-        window.imageLoader.applyFallbacks(editor);
+        imageLoader.applyFallbacks(editor);
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeCellEditor();
@@ -134,7 +139,7 @@ class CellEditor {
 
     async _renderExistingParts(existingParts) {
         const rows = await Promise.all(existingParts.map(async (item, index) => {
-            const colorName = await window.brickLinkData.resolveColorName(item.colorId);
+            const colorName = await brickLinkData.resolveColorName(item.colorId);
             return `
                 <div class="existing-part-item" data-part-id="${esc(item.partId)}" data-color-id="${esc(item.colorId)}">
                     <div class="part-image-small">
@@ -198,7 +203,7 @@ class CellEditor {
 
     setupPartAutocomplete(editor, updateImage) {
         const partInput = editor.querySelector('#cell-part');
-        if (!partInput || !window.brickLinkData?.isLoaded) return;
+        if (!partInput || !brickLinkData?.isLoaded) return;
 
         this.partAutocomplete = new AutoComplete(partInput, {
             minChars: 2,
@@ -206,10 +211,10 @@ class CellEditor {
             placeholder: 'Введите номер или название детали...',
             noResultsText: 'Деталь не найдена',
             showCategories: true,
-            source: async (query) => window.brickLinkData.searchParts(query),
+            source: async (query) => brickLinkData.searchParts(query),
             onSelect: async (value) => {
                 try {
-                    const partData = await window.brickLinkData.getPartById(value);
+                    const partData = await brickLinkData.getPartById(value);
                     partInput.value = partData ? `${partData.partId} - ${partData.name}` : value;
                 } catch {
                     partInput.value = value;
@@ -229,7 +234,7 @@ class CellEditor {
 
     setupColorAutocomplete(editor, updateImage) {
         const colorInput = editor.querySelector('#cell-color');
-        if (!colorInput || !window.brickLinkData?.isLoaded) return;
+        if (!colorInput || !brickLinkData?.isLoaded) return;
 
         this.colorAutocomplete = new AutoComplete(colorInput, {
             minChars: 0,
@@ -242,7 +247,7 @@ class CellEditor {
                         .filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
                         .map(c => ({ value: c.name, label: c.name, rgb: c.rgb, category: 'Цвета' }));
                 }
-                return window.brickLinkData.searchColors(query);
+                return brickLinkData.searchColors(query);
             },
             onSelect: (value) => {
                 colorInput.value = value;
@@ -299,7 +304,7 @@ class CellEditor {
         }
 
         cell.innerHTML = this.view.renderer.renderCellContent(cellData);
-        window.imageLoader.applyFallbacks(cell);
+        imageLoader.applyFallbacks(cell);
         this._syncContainerToApp();
         await window.app?.autoSave();
     }
@@ -319,7 +324,7 @@ class CellEditor {
 
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.view.renderer.renderCellContent(updatedCellData);
-        window.imageLoader.applyFallbacks(cell);
+        imageLoader.applyFallbacks(cell);
         this._syncContainerToApp();
         await window.app?.autoSave();
 
@@ -366,7 +371,7 @@ class CellEditor {
         } else {
             partId = partValue;
             try {
-                const partData = await window.brickLinkData?.getPartById(partId);
+                const partData = await brickLinkData?.getPartById(partId);
                 name = partData?.name || partId;
             } catch {
                 name = partId;
@@ -376,7 +381,7 @@ class CellEditor {
         const newItem = {
             partId: partId.toUpperCase(),
             quantity,
-            colorId: await window.brickLinkData.resolveColorId(color),
+            colorId: await brickLinkData.resolveColorId(color),
             image: await this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
         };
@@ -392,7 +397,7 @@ class CellEditor {
 
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.view.renderer.renderCellContent(updatedCellData);
-        window.imageLoader.applyFallbacks(cell);
+        imageLoader.applyFallbacks(cell);
         cell.classList.remove('empty', 'editing');
         cell.classList.add('filled');
 
@@ -459,7 +464,7 @@ class CellEditor {
         editor.querySelector('#tab-add-new')?.classList.add('active');
 
         editor.querySelector('#cell-part').value = partData.partId;
-        editor.querySelector('#cell-color').value = await window.brickLinkData.resolveColorName(partData.colorId);
+        editor.querySelector('#cell-color').value = await brickLinkData.resolveColorName(partData.colorId);
         editor.querySelector('#cell-quantity').value = partData.quantity || 1;
 
         const updateImage = this.setupImageUpdate(editor);
@@ -481,7 +486,7 @@ class CellEditor {
 
         const cell = document.querySelector(`[data-cell-index="${cellIndex}"]`);
         this.setupExistingPartsListeners(editor, cell, cellIndex);
-        window.imageLoader.applyFallbacks(editor);
+        imageLoader.applyFallbacks(editor);
         this._updateTabCounter(editor, existingParts.length);
         this._updateModalHeader(editor, existingParts.length);
     }
@@ -527,8 +532,8 @@ class CellEditor {
     }
 
     async generateImageUrl(partId, color) {
-        const colorCode = await window.brickLinkData.resolveColorId(color) || '1';
-        return window.imageLoader.getPartImageUrl(partId, colorCode);
+        const colorCode = await brickLinkData.resolveColorId(color) || '1';
+        return imageLoader.getPartImageUrl(partId, colorCode);
     }
 
     setupImageUpdate(editor) {
@@ -544,9 +549,9 @@ class CellEditor {
                 return;
             }
             const partId = partValue.split(' - ')[0].trim();
-            const colorId = colorInput.value.trim() ? await window.brickLinkData.resolveColorId(colorInput.value.trim()) : '0';
+            const colorId = colorInput.value.trim() ? await brickLinkData.resolveColorId(colorInput.value.trim()) : '0';
             try {
-                const imageUrl = window.imageLoader.getPartImageUrl(partId, colorId);
+                const imageUrl = imageLoader.getPartImageUrl(partId, colorId);
                 await this._loadPartImage(imageElement, placeholderElement, imageUrl);
             } catch {
                 this._showImagePlaceholder(imageElement, placeholderElement);
@@ -563,7 +568,7 @@ class CellEditor {
     }
 
     async _loadPartImage(imageElement, placeholderElement, imageUrl) {
-        return window.imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
+        return imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
             onSuccess: (url, isFallback) => {
                 if (isFallback) imageElement.classList.add('fallback-image');
             }
@@ -600,8 +605,8 @@ class CellEditor {
             colorInfo.style.display = 'block';
             colorInfo.innerHTML = '<small>⏳ Загрузка доступных цветов...</small>';
 
-            if (window.brickLinkData?.isLoaded) {
-                this.availableColors = await window.brickLinkData.getAvailableColorsForPart(partId);
+            if (brickLinkData?.isLoaded) {
+                this.availableColors = await brickLinkData.getAvailableColorsForPart(partId);
                 if (this.availableColors.length > 0) {
                     colorInput.disabled = false;
                     colorInput.placeholder = `Выберите из ${this.availableColors.length} доступных цветов`;

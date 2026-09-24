@@ -1,7 +1,7 @@
 /**
  * Утилитарный класс для загрузки изображений с fallback стратегиями
  */
-class ImageLoader {
+export class ImageLoader {
     constructor() {
         this.fallbackCache = new Map(); // Кэш для fallback изображений
     }
@@ -232,5 +232,4 @@ class ImageLoader {
     }
 }
 
-// Создаем глобальный экземпляр
-window.imageLoader = new ImageLoader();
+export const imageLoader = new ImageLoader();

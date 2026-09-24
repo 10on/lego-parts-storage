@@ -1,5 +1,9 @@
+import { MockData } from '../../../data/project.js';
+import { IndexedDBAdapter } from '../../../data/storage/idb.js';
+import { StorageAdapterFactory } from '../../../data/storage/index.js';
+
 // Вид настроек
-class SettingsView {
+export class SettingsView {
     constructor() {
         this.settings = {
             storageAdapter: 'local',

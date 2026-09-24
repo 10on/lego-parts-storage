@@ -1,9 +1,12 @@
+import { LCXFileLoader } from './lcx-file-loader.js';
+import { LCXParser } from './lcx-parser.js';
+
 /**
  * LCX-compatible IndexedDB Adapter
  * Расширение IndexedDBAdapter для поддержки LCX-Tabular формата
  */
 
-class LCXIndexedDBAdapter {
+export class LCXIndexedDBAdapter {
     constructor(dbName = 'BrickLinkDB', version = 2) {
         this.dbName = dbName;
         this.version = version;
@@ -893,5 +896,3 @@ class LCXIndexedDBAdapter {
 
 }
 
-// Экспортируем класс
-window.LCXIndexedDBAdapter = LCXIndexedDBAdapter;

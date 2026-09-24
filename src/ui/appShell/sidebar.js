@@ -1,5 +1,5 @@
 // Компонент боковой панели навигации
-class Sidebar {
+export class Sidebar {
     constructor() {
         this.isCollapsed = false;
         this.init();

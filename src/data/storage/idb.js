@@ -1,5 +1,7 @@
+import { StorageAdapter } from './adapter.js';
+
 // Адаптер для IndexedDB (заглушка)
-class IndexedDBAdapter extends StorageAdapter {
+export class IndexedDBAdapter extends StorageAdapter {
     constructor() {
         super();
         this.dbName = 'LegoStorageDB';

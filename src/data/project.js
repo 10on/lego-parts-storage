@@ -1,5 +1,5 @@
 // Модель проекта и тестовые данные
-class MockData {
+export class MockData {
     constructor() {
         this.containers = [];
         this.pileItems = [];

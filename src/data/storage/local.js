@@ -1,5 +1,7 @@
+import { StorageAdapter } from './adapter.js';
+
 // Адаптер для LocalStorage
-class LocalStorageAdapter extends StorageAdapter {
+export class LocalStorageAdapter extends StorageAdapter {
     constructor() {
         super();
         this.storageKey = 'lego-storage-project';

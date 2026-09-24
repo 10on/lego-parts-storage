@@ -1,5 +1,7 @@
+import { Utils, esc } from '../../utils/index.js';
+
 // Главный вид - список контейнеров
-class HomeView {
+export class HomeView {
     constructor() {
         this.containers = [];
     }

@@ -1,4 +1,4 @@
-class CellDragDrop {
+export class CellDragDrop {
     constructor(containerView) {
         this.view = containerView;
         this.dragSourceIndex = null;

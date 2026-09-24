@@ -3,7 +3,7 @@
  * Парсер для эффективной обработки каталога LEGO в формате LCX-Tabular v1
  */
 
-class LCXParser {
+export class LCXParser {
     constructor() {
         this.supportedSchemaVersion = 1;
         this.requiredTables = ['categories', 'colors', 'parts'];
@@ -400,5 +400,3 @@ class LCXParser {
     }
 }
 
-// Экспортируем класс
-window.LCXParser = LCXParser;

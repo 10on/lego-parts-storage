@@ -1,4 +1,4 @@
-class SplitMode {
+export class SplitMode {
     constructor(containerView) {
         this.view = containerView;
         this.isSplitMode = false;

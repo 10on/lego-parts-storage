@@ -1,4 +1,4 @@
-class LCXFileLoader {
+export class LCXFileLoader {
     static async downloadInChunks(response, progressCallback = null) {
         const reader = response.body.getReader();
         const chunks = [];

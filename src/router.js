@@ -1,5 +1,5 @@
 // Роутер для навигации между видами
-class Router {
+export class Router {
     constructor() {
         this.routes = new Map();
         this.currentRoute = null;

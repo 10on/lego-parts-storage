@@ -1,9 +1,11 @@
+import { esc } from '../utils/index.js';
+
 /**
  * Simple Autocomplete Component
  * Легкий компонент автокомплита без зависимостей
  */
 
-class AutoComplete {
+export class AutoComplete {
     constructor(input, options = {}) {
         this.input = input;
         this.options = {
@@ -268,5 +270,3 @@ class AutoComplete {
     }
 }
 
-// Экспортируем класс
-window.AutoComplete = AutoComplete;

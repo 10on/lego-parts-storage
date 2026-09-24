@@ -1,5 +1,8 @@
+import { imageLoader } from '../../../utils/imageLoader.js';
+import { Utils, esc } from '../../../utils/index.js';
+
 // Вид перестановки контейнеров
-class SplitView {
+export class SplitView {
     constructor() {
         this.leftContainer = null;
         this.rightContainer = null;
@@ -47,7 +50,7 @@ class SplitView {
         this.setupEventListeners();
         
         // Обрабатываем fallback изображения
-        window.imageLoader.applyFallbacks(document, '.cell-part-image[data-original-src]');
+        imageLoader.applyFallbacks(document, '.cell-part-image[data-original-src]');
         
         // Настройка клик-системы после рендеринга
         setTimeout(() => {

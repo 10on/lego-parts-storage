@@ -1,4 +1,6 @@
-class CellRenderer {
+import { Utils, esc } from '../../../utils/index.js';
+
+export class CellRenderer {
     renderCellContent(cellData) {
         if (cellData && cellData.type === 'merged') {
             if (!cellData.items || cellData.items.length === 0) {

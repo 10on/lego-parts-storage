@@ -1,9 +1,12 @@
+import { LCXIndexedDBAdapter } from './lcx-indexeddb-adapter.js';
+import { LoadingProgress } from '../ui/components/LoadingProgress.js';
+
 /**
  * BrickLink Data Management
  * Парсинг и работа с данными деталей и цветов из BrickLink
  */
 
-class BrickLinkData {
+export class BrickLinkData {
     constructor() {
         // Используем LCX адаптер по умолчанию
         this.dbAdapter = new LCXIndexedDBAdapter();
@@ -235,5 +238,4 @@ class BrickLinkData {
     }
 }
 
-// Экспортируем синглтон
-window.brickLinkData = new BrickLinkData();
+export const brickLinkData = new BrickLinkData();

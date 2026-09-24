@@ -1,5 +1,10 @@
+import { AutoComplete } from '../../../components/autocomplete.js';
+import { brickLinkData } from '../../../data/bricklink.js';
+import { imageLoader } from '../../../utils/imageLoader.js';
+import { esc } from '../../../utils/index.js';
+
 // Вид кучи деталей
-class PileView {
+export class PileView {
     constructor() {
         this.pileItems = [];
         this.selectedItems = new Set();
@@ -17,7 +22,7 @@ class PileView {
             container.innerHTML = itemsHtml.join('');
             
             // Обрабатываем fallback изображения
-            window.imageLoader.applyFallbacks(container, '.pile-item-image[data-original-src]');
+            imageLoader.applyFallbacks(container, '.pile-item-image[data-original-src]');
         }
 
         this.setupEventListeners();
@@ -37,7 +42,7 @@ class PileView {
 
     async renderPileItem(item) {
         const lastUsed = new Date(item.lastUsed).toLocaleDateString('ru-RU');
-        const colorName = await window.brickLinkData.resolveColorName(item.colorId);
+        const colorName = await brickLinkData.resolveColorName(item.colorId);
         
         return `
             <div class="pile-item" data-item-id="${esc(item.id)}">
@@ -219,7 +224,7 @@ class PileView {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Цвет</label>
-                        <input type="text" class="form-input" id="edit-color" value="${esc(await window.brickLinkData.resolveColorName(item.colorId))}">
+                        <input type="text" class="form-input" id="edit-color" value="${esc(await brickLinkData.resolveColorName(item.colorId))}">
                     </div>
                 </div>
                 <div class="form-group">
@@ -252,7 +257,7 @@ class PileView {
         if (item) {
             item.partId = partId;
             item.quantity = quantity;
-            item.colorId = await window.brickLinkData.resolveColorId(color, '1');
+            item.colorId = await brickLinkData.resolveColorId(color, '1');
             item.image = image;
             item.lastUsed = new Date().toISOString();
 
@@ -467,7 +472,7 @@ class PileView {
         const newItem = {
             id: `pile-${Date.now()}`,
             partId,
-            colorId: await window.brickLinkData.resolveColorId(color, '1'),
+            colorId: await brickLinkData.resolveColorId(color, '1'),
             quantity,
             image,
             lastUsed: new Date().toISOString()
@@ -508,7 +513,7 @@ class PileView {
             return;
         }
         
-        if (!window.AutoComplete) {
+        if (!AutoComplete) {
             console.warn('AutoComplete not available');
             return;
         }
@@ -522,14 +527,14 @@ class PileView {
             placeholder: '3001',
             source: async (query) => {
                 console.log('Searching parts for:', query);
-                if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
+                if (!brickLinkData || !brickLinkData.isLoaded) {
                     console.warn('BrickLink data not loaded');
                     return [];
                 }
                 
                 try {
                     // searchParts уже возвращает элементы в формате автокомплита
-                    return await window.brickLinkData.searchParts(query);
+                    return await brickLinkData.searchParts(query);
                 } catch (error) {
                     console.error('Error searching parts:', error);
                     return [];
@@ -553,7 +558,7 @@ class PileView {
             return;
         }
         
-        if (!window.AutoComplete) {
+        if (!AutoComplete) {
             console.warn('AutoComplete not available');
             return;
         }
@@ -664,9 +669,9 @@ class PileView {
             colorInfo.innerHTML = '<small>⏳ Загрузка доступных цветов...</small>';
 
             // Получаем доступные цвета для детали
-            if (window.brickLinkData && window.brickLinkData.isLoaded) {
+            if (brickLinkData && brickLinkData.isLoaded) {
                 console.log('BrickLink data is loaded, fetching colors...');
-                this.availableColors = await window.brickLinkData.getAvailableColorsForPart(partId);
+                this.availableColors = await brickLinkData.getAvailableColorsForPart(partId);
                 console.log('Available colors:', this.availableColors);
                 
                 if (this.availableColors.length > 0) {

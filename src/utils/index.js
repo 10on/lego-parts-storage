@@ -1,5 +1,5 @@
 // Общие утилиты
-class Utils {
+export class Utils {
     static generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
@@ -65,4 +65,4 @@ class Utils {
 }
 
 // Короткий алиас для шаблонов: `<div>${esc(value)}</div>`
-const esc = Utils.escapeHtml;
+export const esc = Utils.escapeHtml;

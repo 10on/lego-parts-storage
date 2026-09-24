@@ -1,4 +1,4 @@
-class LoadingProgress {
+export class LoadingProgress {
     constructor() {
         this.isVisible = false;
         this.currentStep = 0;
@@ -186,4 +186,3 @@ class LoadingProgress {
     }
 }
 
-window.LoadingProgress = LoadingProgress;

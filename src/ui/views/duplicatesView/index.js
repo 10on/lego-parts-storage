@@ -1,5 +1,7 @@
+import { esc } from '../../../utils/index.js';
+
 // Вид поиска дубликатов
-class DuplicatesView {
+export class DuplicatesView {
     constructor() {
         this.duplicates = [];
     }

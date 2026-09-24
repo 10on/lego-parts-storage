@@ -1,5 +1,5 @@
 // Глобальные обработчики событий
-class EventManager {
+export class EventManager {
     constructor() {
         this.handlers = new Map();
         this.init();

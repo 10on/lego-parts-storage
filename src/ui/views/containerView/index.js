@@ -1,4 +1,12 @@
-class ContainerView {
+import { CellDragDrop } from './cellDragDrop.js';
+import { CellEditor } from './cellEditor.js';
+import { CellRenderer } from './cellRenderer.js';
+import { MergeMode } from './mergeMode.js';
+import { SplitMode } from './splitMode.js';
+import { imageLoader } from '../../../utils/imageLoader.js';
+import { Utils } from '../../../utils/index.js';
+
+export class ContainerView {
     constructor() {
         this.container = null;
         this.isEditing = false;
@@ -59,7 +67,7 @@ class ContainerView {
             cell.classList.add('empty');
         }
 
-        window.imageLoader.applyFallbacks(cell);
+        imageLoader.applyFallbacks(cell);
         cell.addEventListener('click', (e) => this.handleCellClick(e, cell));
         cell.addEventListener('dblclick', (e) => this.handleCellDoubleClick(e, cell));
         this.dragDrop.setupCellDragDrop(cell, index);

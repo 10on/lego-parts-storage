@@ -1,5 +1,22 @@
+import { brickLinkData } from './data/bricklink.js';
+import { MockData } from './data/project.js';
+import { LocalStorageAdapter } from './data/storage/local.js';
+import { Container } from './domain/model.js';
+import { Router } from './router.js';
+import { Sidebar } from './ui/appShell/sidebar.js';
+import { LoadingProgress } from './ui/components/LoadingProgress.js';
+import { ContainerView } from './ui/views/containerView/index.js';
+import { DuplicatesView } from './ui/views/duplicatesView/index.js';
+import { HomeView } from './ui/views/homeView.js';
+import { ImportView } from './ui/views/importView/index.js';
+import { PileView } from './ui/views/pileView/index.js';
+import { SettingsView } from './ui/views/settingsView/index.js';
+import { SplitView } from './ui/views/splitView/index.js';
+import { Utils, esc } from './utils/index.js';
+import './events.js'; // глобальные горячие клавиши
+
 // Главный файл приложения
-class LegoStorageApp {
+export class LegoStorageApp {
     constructor() {
         this.currentView = 'home';
         this.containers = [];
@@ -12,12 +29,6 @@ class LegoStorageApp {
 
     async init() {
         console.log('🚀 Инициализация LEGO Storage Mapper');
-        
-        // Проверяем, что LoadingProgress загружен
-        if (typeof LoadingProgress === 'undefined') {
-            console.error('❌ LoadingProgress не загружен');
-            return;
-        }
         
         // Показываем прогресс инициализации
         const initProgress = LoadingProgress.createAppInitProgress();
@@ -105,7 +116,7 @@ class LegoStorageApp {
     async loadBrickLinkData(showProgress = true, progressCallback = null) {
         try {
             console.log('📦 Загрузка данных BrickLink...');
-            await window.brickLinkData.loadData(showProgress, progressCallback);
+            await brickLinkData.loadData(showProgress, progressCallback);
         } catch (error) {
             console.error('❌ Ошибка загрузки данных BrickLink:', error);
             this.showNotification('Ошибка загрузки данных каталога. Некоторые функции могут быть недоступны.', 'warning');

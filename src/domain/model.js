@@ -1,5 +1,7 @@
+import { Utils } from '../utils/index.js';
+
 // Доменная модель приложения
-class Container {
+export class Container {
     constructor(data = {}) {
         // Сохраняем все поля (в т.ч. color, description), чтобы они не терялись при сохранении
         Object.assign(this, data);
