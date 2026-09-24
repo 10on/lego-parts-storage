@@ -30,13 +30,11 @@ class SettingsView {
                     <select class="form-select" id="storage-adapter" disabled>
                         <option value="local">LocalStorage (быстро, ограничено)</option>
                         <option value="idb">IndexedDB (больше места)</option>
-                        <option value="firebase">Firebase (синхронизация)</option>
                     </select>
                 </div>
                 <div class="setting-description">
                     <p><strong>LocalStorage:</strong> Данные хранятся локально в браузере. Быстро, но ограничено по объему.</p>
                     <p><strong>IndexedDB:</strong> Больше места для хранения, поддерживает большие объемы данных.</p>
-                    <p><strong>Firebase:</strong> Облачное хранение с синхронизацией между устройствами.</p>
                     <p class="setting-disabled-note">⚠️ Переключение адаптеров хранения будет доступно в следующих версиях</p>
                 </div>
             </div>
@@ -383,10 +381,10 @@ class SettingsView {
     }
 
     async clearAllData() {
-        if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит все данные к начальному состоянию:\n\n• Все контейнеры и их содержимое будут удалены\n• Все детали в куче будут удалены\n• Настройки сбросятся к умолчанию\n• Будут созданы дефолтные контейнеры\n• Очистятся ВСЕ хранилища (localStorage, IndexedDB, Firebase)\n\nВы уверены, что хотите продолжить?')) {
+        if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит все данные к начальному состоянию:\n\n• Все контейнеры и их содержимое будут удалены\n• Все детали в куче будут удалены\n• Настройки сбросятся к умолчанию\n• Будут созданы дефолтные контейнеры\n• Очистятся ВСЕ хранилища (localStorage, IndexedDB)\n\nВы уверены, что хотите продолжить?')) {
             try {
                 // Очищаем все адаптеры хранения
-                const adapters = ['local', 'idb', 'firebase'];
+                const adapters = ['local', 'idb'];
                 const clearPromises = [];
                 
                 for (const adapterType of adapters) {

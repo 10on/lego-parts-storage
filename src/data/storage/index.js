@@ -37,8 +37,6 @@ class StorageAdapterFactory {
                 return new LocalStorageAdapter();
             case 'idb':
                 return new IndexedDBAdapter();
-            case 'firebase':
-                return new FirebaseAdapter();
             default:
                 throw new Error(`Unknown storage adapter type: ${type}`);
         }

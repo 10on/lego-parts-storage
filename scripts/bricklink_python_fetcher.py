@@ -90,12 +90,8 @@ class BrickLinkFetcher:
     
     def add_additional_cookies(self):
         """Добавляет дополнительные cookies для доступа к Part & Color Codes"""
-        # Ключевые cookies для доступа к Part & Color Codes
+        # Сессия берется из cookies Firefox; здесь только настройки отображения каталога
         additional_cookies = {
-            'BLNEWSESSIONID': 'V10FCD61F816536E8DD4FA7B0E6C3AEB2C6103B74148ACAEE752AC3986C61B2E9019EEC80CFFB53A74431BDF0296F8CF6D1',
-            'BLHASTOKEN': '1',
-            'blckSessionStarted': '1',
-            'blCartBuyerID': '-1122976209',
             'catalogView': 'cView=1^&invView=1'
         }
         
