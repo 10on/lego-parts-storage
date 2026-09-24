@@ -181,44 +181,32 @@ class LCXIndexedDBAdapter {
      * Массовое сохранение данных с отслеживанием прогресса
      */
     async saveBulkDataWithProgress(storeName, data, progressCallback) {
-        const batchSize = 100; // Уменьшаем размер батча для более частых обновлений
+        // Крупные батчи в одной транзакции: коммит транзакции — самая дорогая часть записи
+        const batchSize = 5000;
         const totalItems = data.length;
-        let processedItems = 0;
-        
+        const stepNumber = this.getStepNumberForStore(storeName);
+        const dataTypeName = this.getDataTypeName(storeName);
+
         for (let i = 0; i < totalItems; i += batchSize) {
-            const batch = data.slice(i, i + batchSize);
-            
-            // Создаем новую транзакцию для каждого батча
             const transaction = this.db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
-            
-            // Сохраняем батч (используем put вместо add для избежания ошибок дубликатов)
-            await Promise.all(batch.map(item => {
-                return new Promise((resolve, reject) => {
-                    const request = store.put(item);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => {
-                        console.warn(`⚠️ Failed to save item to ${storeName}:`, request.error);
-                        resolve(); // Продолжаем выполнение даже при ошибке
-                    };
-                });
-            }));
-            
-            // Ждем завершения транзакции
-            await this.waitForTransaction(transaction);
-            
-            processedItems += batch.length;
-            
-            const progress = Math.min(100, Math.round((processedItems / totalItems) * 100));
-            if (progressCallback) {
-                const stepNumber = this.getStepNumberForStore(storeName);
-                const dataTypeName = this.getDataTypeName(storeName);
-                progressCallback(stepNumber, progress, `${dataTypeName}: сохранено ${processedItems} из ${totalItems} записей`);
+            const end = Math.min(i + batchSize, totalItems);
+
+            for (let j = i; j < end; j++) {
+                // put вместо add, чтобы не падать на дубликатах
+                const request = store.put(data[j]);
+                request.onerror = (event) => {
+                    console.warn(`⚠️ Failed to save item to ${storeName}:`, request.error);
+                    event.preventDefault(); // не прерываем транзакцию из-за одной записи
+                    event.stopPropagation();
+                };
             }
-            
-            // Даем браузеру время на обновление UI каждые 2 батча
-            if (i % (batchSize * 2) === 0) {
-                await new Promise(resolve => setTimeout(resolve, 5));
+
+            await this.waitForTransaction(transaction);
+
+            if (progressCallback) {
+                const progress = Math.round((end / totalItems) * 100);
+                progressCallback(stepNumber, progress, `${dataTypeName}: сохранено ${end} из ${totalItems} записей`);
             }
         }
     }
