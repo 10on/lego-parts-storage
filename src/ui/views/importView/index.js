@@ -66,12 +66,12 @@ class ImportView {
         return this.importHistory.map(record => `
             <div class="history-item">
                 <div class="history-info">
-                    <div class="history-type">${record.type}</div>
+                    <div class="history-type">${esc(record.type)}</div>
                     <div class="history-date">${new Date(record.date).toLocaleString('ru-RU')}</div>
                 </div>
                 <div class="history-details">
-                    <div class="history-filename">${record.filename}</div>
-                    <div class="history-status ${record.status}">${this.getStatusText(record.status)}</div>
+                    <div class="history-filename">${esc(record.filename)}</div>
+                    <div class="history-status ${esc(record.status)}">${this.getStatusText(record.status)}</div>
                 </div>
             </div>
         `).join('');

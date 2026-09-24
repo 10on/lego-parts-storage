@@ -131,11 +131,11 @@ class AutoComplete {
             // Показываем категорию если включено
             if (this.options.showCategories && item.category && item.category !== currentCategory) {
                 currentCategory = item.category;
-                html += `<div class="autocomplete-category">${currentCategory}</div>`;
+                html += `<div class="autocomplete-category">${esc(currentCategory)}</div>`;
             }
 
             html += `
-                <div class="autocomplete-item" data-index="${index}" data-value="${item.value}">
+                <div class="autocomplete-item" data-index="${index}" data-value="${esc(item.value)}">
                     ${this.renderItem(item)}
                 </div>
             `;
@@ -154,7 +154,7 @@ class AutoComplete {
         if (item.rgb) {
             html = `
                 <div class="color-item">
-                    <span class="color-swatch" style="background-color: #${item.rgb}"></span>
+                    <span class="color-swatch" style="background-color: #${esc(item.rgb)}"></span>
                     ${html}
                 </div>
             `;
@@ -162,18 +162,20 @@ class AutoComplete {
 
         // Добавляем категорию для деталей
         if (item.category && !this.options.showCategories) {
-            html += `<span class="item-category">${item.category}</span>`;
+            html += `<span class="item-category">${esc(item.category)}</span>`;
         }
 
         return html;
     }
 
     highlightMatch(text) {
-        const query = this.input.value;
-        if (!query) return text;
-        
-        const regex = new RegExp(`(${query})`, 'gi');
-        return text.replace(regex, '<mark>$1</mark>');
+        const safeText = esc(text);
+        const query = this.input.value.trim();
+        if (!query) return safeText;
+
+        // Ищем по уже экранированному тексту, спецсимволы запроса экранируем для RegExp
+        const pattern = esc(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return safeText.replace(new RegExp(`(${pattern})`, 'gi'), '<mark>$1</mark>');
     }
 
     attachItemListeners() {

@@ -182,6 +182,43 @@ class BrickLinkData {
     }
 
     /**
+     * Получить ID цвета по имени; при пустом или неизвестном имени возвращает fallbackId
+     */
+    async resolveColorId(colorName, fallbackId = '0') {
+        if (!colorName || colorName.trim() === '' || !this.isLoaded) {
+            return fallbackId;
+        }
+
+        try {
+            const colorData = await this.getColorByName(colorName);
+            return colorData ? colorData.id.toString() : fallbackId;
+        } catch (error) {
+            console.error('Error getting color ID:', error);
+            return fallbackId;
+        }
+    }
+
+    /**
+     * Получить название цвета по ID с запасными вариантами для отображения
+     */
+    async resolveColorName(colorId) {
+        if (!colorId || colorId === '0') {
+            return 'Default';
+        }
+        if (!this.isLoaded) {
+            return `Color ${colorId}`;
+        }
+
+        try {
+            const colorData = await this.getColorById(colorId);
+            return colorData ? colorData.name : `Color ${colorId}`;
+        } catch (error) {
+            console.error('Error getting color name:', error);
+            return `Color ${colorId}`;
+        }
+    }
+
+    /**
      * Получить статистику данных
      */
     async getStats() {

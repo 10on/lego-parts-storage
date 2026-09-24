@@ -45,7 +45,7 @@ class DuplicatesView {
         return `
             <div class="duplicate-group">
                 <div class="duplicate-group-header">
-                    <div class="duplicate-group-title">${group.partId} - ${group.name}</div>
+                    <div class="duplicate-group-title">${esc(group.partId)} - ${esc(group.name)}</div>
                     <div class="duplicate-group-count">${group.items.length} экземпляров</div>
                 </div>
                 <div class="duplicate-items">
@@ -58,17 +58,17 @@ class DuplicatesView {
     renderDuplicateItem(item) {
         return `
             <div class="duplicate-item">
-                <img src="${item.image}" alt="${item.name}" class="duplicate-item-image" onerror="this.style.display='none'">
+                <img src="${esc(item.image)}" alt="${esc(item.name)}" class="duplicate-item-image" onerror="this.style.display='none'">
                 <div class="duplicate-item-info">
-                    <div class="duplicate-item-name">${item.name}</div>
-                    <div class="duplicate-item-location">${item.location}</div>
+                    <div class="duplicate-item-name">${esc(item.name)}</div>
+                    <div class="duplicate-item-location">${esc(item.location)}</div>
                 </div>
-                <div class="duplicate-item-quantity">${item.quantity}</div>
+                <div class="duplicate-item-quantity">${esc(item.quantity)}</div>
                 <div class="duplicate-item-actions">
-                    <button class="btn btn-sm btn-outline" data-action="merge" data-item-id="${item.id}">
+                    <button class="btn btn-sm btn-outline" data-action="merge" data-item-id="${esc(item.id)}">
                         Объединить
                     </button>
-                    <button class="btn btn-sm btn-outline" data-action="view" data-item-id="${item.id}">
+                    <button class="btn btn-sm btn-outline" data-action="view" data-item-id="${esc(item.id)}">
                         Просмотр
                     </button>
                 </div>
@@ -192,7 +192,7 @@ class DuplicatesView {
         
         const content = `
             <div class="merge-duplicates-modal">
-                <h4>Объединить дубликаты: ${group.name}</h4>
+                <h4>Объединить дубликаты: ${esc(group.name)}</h4>
                 <p>Выберите, как объединить дубликаты:</p>
                 <div class="merge-options">
                     <div class="merge-option">

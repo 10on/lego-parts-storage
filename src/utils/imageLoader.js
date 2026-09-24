@@ -7,6 +7,46 @@ class ImageLoader {
     }
 
     /**
+     * Формирует URL изображения детали на BrickLink
+     * @param {string} partId - ID детали
+     * @param {string|number} colorId - ID цвета BrickLink (0 - дефолтный рендер)
+     * @returns {string}
+     */
+    getPartImageUrl(partId, colorId = '0') {
+        return `https://img.bricklink.com/ItemImage/PN/${colorId}/${partId}.png`;
+    }
+
+    /**
+     * Подключает fallback для всех изображений с data-original-src внутри root:
+     * если оригинал не загружается, пробует альтернативные цвета
+     * @param {ParentNode} root - Элемент, в котором искать изображения
+     * @param {string} selector - Селектор изображений
+     */
+    applyFallbacks(root = document, selector = 'img[data-original-src]') {
+        root.querySelectorAll(selector).forEach(img => {
+            const originalSrc = img.dataset.originalSrc;
+            if (!originalSrc) return;
+
+            const testImg = new Image();
+            testImg.onload = () => {
+                if (img.src !== originalSrc) {
+                    img.src = originalSrc;
+                }
+            };
+            testImg.onerror = () => {
+                this.loadImageWithFallback(originalSrc, img, null, {
+                    onSuccess: (url, isFallback) => {
+                        if (isFallback) {
+                            img.classList.add('fallback-image');
+                        }
+                    }
+                });
+            };
+            testImg.src = originalSrc;
+        });
+    }
+
+    /**
      * Загружает изображение с fallback стратегиями
      * @param {string} originalUrl - Оригинальный URL изображения
      * @param {HTMLElement} imageElement - DOM элемент изображения
@@ -22,12 +62,9 @@ class ImageLoader {
             onError = null
         } = options;
 
-        console.log('ImageLoader: Loading image:', originalUrl);
-
         try {
             // Пытаемся загрузить оригинальное изображение
             await this.loadImage(originalUrl, imageElement);
-            console.log('ImageLoader: Original image loaded successfully');
             if (onSuccess) onSuccess(originalUrl, false);
             return true;
         } catch (error) {
@@ -120,20 +157,20 @@ class ImageLoader {
         
         // 1. Пробуем с дефолтным цветом (ID = 0)
         if (colorId !== '0') {
-            fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/0/${partId}.png`);
+            fallbackUrls.push(this.getPartImageUrl(partId, '0'));
         }
         
         // 2. Пробуем с базовыми цветами
         const basicColors = ['1', '2', '3', '4', '5']; // White, Tan, Yellow, Orange, Red
         for (const basicColorId of basicColors) {
             if (basicColorId !== colorId) {
-                fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/${basicColorId}/${partId}.png`);
+                fallbackUrls.push(this.getPartImageUrl(partId, basicColorId));
             }
         }
         
         // 3. Пробуем с черным цветом (ID = 11)
         if (colorId !== '11') {
-            fallbackUrls.push(`https://img.bricklink.com/ItemImage/PN/11/${partId}.png`);
+            fallbackUrls.push(this.getPartImageUrl(partId, '11'));
         }
         
         // Кэшируем результат

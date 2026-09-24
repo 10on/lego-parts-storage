@@ -464,7 +464,7 @@ class LegoStorageApp {
                 <div class="notification-title">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} Уведомление</div>
                 <button class="notification-close">&times;</button>
             </div>
-            <div class="notification-message">${message}</div>
+            <div class="notification-message">${esc(message)}</div>
         `;
         
         document.body.appendChild(notification);

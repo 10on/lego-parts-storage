@@ -17,34 +17,10 @@ class PileView {
             container.innerHTML = itemsHtml.join('');
             
             // Обрабатываем fallback изображения
-            this.handlePileImageFallbacks();
+            window.imageLoader.applyFallbacks(container, '.pile-item-image[data-original-src]');
         }
 
         this.setupEventListeners();
-    }
-
-    /**
-     * Обрабатывает fallback загрузку изображений в куче
-     */
-    handlePileImageFallbacks() {
-        if (!window.imageLoader) return;
-
-        const images = document.querySelectorAll('.pile-item-image[data-original-src]');
-        images.forEach(img => {
-            const originalSrc = img.dataset.originalSrc;
-            if (originalSrc && img.src !== originalSrc) {
-                // Если изображение не загрузилось, пробуем fallback
-                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
-                    showFallbackIndicator: true,
-                    fallbackIndicatorText: '⚠️ Цвет',
-                    onSuccess: (url, isFallback) => {
-                        if (isFallback) {
-                            img.classList.add('fallback-image');
-                        }
-                    }
-                });
-            }
-        });
     }
 
     renderEmptyState() {
@@ -61,20 +37,20 @@ class PileView {
 
     async renderPileItem(item) {
         const lastUsed = new Date(item.lastUsed).toLocaleDateString('ru-RU');
-        const colorName = await this.getColorName(item.colorId);
+        const colorName = await window.brickLinkData.resolveColorName(item.colorId);
         
         return `
-            <div class="pile-item" data-item-id="${item.id}">
-                <img src="${item.image}" alt="${item.partId}" class="pile-item-image" onerror="this.style.display='none'" data-original-src="${item.image}">
+            <div class="pile-item" data-item-id="${esc(item.id)}">
+                <img src="${esc(item.image)}" alt="${esc(item.partId)}" class="pile-item-image" onerror="this.style.display='none'" data-original-src="${esc(item.image)}">
                 <div class="pile-item-info">
-                    <div class="pile-item-part-id">Part ID: ${item.partId}</div>
-                    <div class="pile-item-color">Цвет: ${colorName}</div>
-                    <div class="pile-item-last-used">Использовано: ${lastUsed}</div>
+                    <div class="pile-item-part-id">Part ID: ${esc(item.partId)}</div>
+                    <div class="pile-item-color">Цвет: ${esc(colorName)}</div>
+                    <div class="pile-item-last-used">Использовано: ${esc(lastUsed)}</div>
                 </div>
                 <div class="pile-item-actions">
                     <div class="pile-item-quantity-controls">
                         <button class="quantity-btn" data-action="decrease">-</button>
-                        <input type="number" class="quantity-input" value="${item.quantity || ''}" min="0">
+                        <input type="number" class="quantity-input" value="${esc(item.quantity || '')}" min="0">
                         <button class="quantity-btn" data-action="increase">+</button>
                     </div>
                     <button class="btn btn-sm btn-outline" data-action="edit" title="Редактировать">
@@ -234,21 +210,21 @@ class PileView {
             <form id="edit-pile-item-form">
                 <div class="form-group">
                     <label class="form-label">Part ID</label>
-                    <input type="text" class="form-input" id="edit-part-id" value="${item.partId}" required>
+                    <input type="text" class="form-input" id="edit-part-id" value="${esc(item.partId)}" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Количество</label>
-                        <input type="number" class="form-input" id="edit-quantity" value="${item.quantity}" min="0">
+                        <input type="number" class="form-input" id="edit-quantity" value="${esc(item.quantity)}" min="0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Цвет</label>
-                        <input type="text" class="form-input" id="edit-color" value="${await this.getColorName(item.colorId)}">
+                        <input type="text" class="form-input" id="edit-color" value="${esc(await window.brickLinkData.resolveColorName(item.colorId))}">
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">URL изображения</label>
-                    <input type="url" class="form-input" id="edit-image" value="${item.image}">
+                    <input type="url" class="form-input" id="edit-image" value="${esc(item.image)}">
                 </div>
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary">Сохранить изменения</button>
@@ -276,7 +252,7 @@ class PileView {
         if (item) {
             item.partId = partId;
             item.quantity = quantity;
-            item.colorId = await this.getColorId(color);
+            item.colorId = await window.brickLinkData.resolveColorId(color, '1');
             item.image = image;
             item.lastUsed = new Date().toISOString();
 
@@ -333,19 +309,19 @@ class PileView {
 
         const content = `
             <div class="distribute-modal">
-                <h4>Распределить "${item.name}"</h4>
+                <h4>Распределить "${esc(item.name)}"</h4>
                 <p>Выберите контейнер для распределения:</p>
                 <div class="containers-list">
                     ${containers.map(container => `
-                        <div class="container-option" data-container-id="${container.id}">
-                            <h5>${container.name}</h5>
+                        <div class="container-option" data-container-id="${esc(container.id)}">
+                            <h5>${esc(container.name)}</h5>
                             <p>${container.rows}×${container.cols} ячеек</p>
                         </div>
                     `).join('')}
                 </div>
                 <div class="form-group">
                     <label class="form-label">Количество для распределения</label>
-                    <input type="number" class="form-input" id="distribute-quantity" value="${item.quantity}" min="1" max="${item.quantity}">
+                    <input type="number" class="form-input" id="distribute-quantity" value="${esc(item.quantity)}" min="1" max="${esc(item.quantity)}">
                 </div>
                 <div class="form-group">
                     <button type="button" class="btn btn-primary" id="confirm-distribute">Распределить</button>
@@ -491,7 +467,7 @@ class PileView {
         const newItem = {
             id: `pile-${Date.now()}`,
             partId,
-            colorId: await this.getColorId(color),
+            colorId: await window.brickLinkData.resolveColorId(color, '1'),
             quantity,
             image,
             lastUsed: new Date().toISOString()
@@ -520,42 +496,6 @@ class PileView {
 
         // Логика распределения выбранных элементов
         console.log('Распределение выбранных элементов:', Array.from(this.selectedItems));
-    }
-
-    async getColorId(color) {
-        // Загружаем цвет из BrickLink данных
-        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
-            console.warn('BrickLink data not loaded, using fallback color ID');
-            return '1'; // Fallback к белому цвету
-        }
-        
-        try {
-            const colorData = await window.brickLinkData.getColorByName(color);
-            return colorData ? colorData.id.toString() : '1';
-        } catch (error) {
-            console.error('Error getting color ID:', error);
-            return '1'; // Fallback к белому цвету
-        }
-    }
-
-    async getColorName(colorId) {
-        if (!colorId || colorId === '0') {
-            return 'Default'; // Дефолтный цвет
-        }
-        
-        // Загружаем цвет из BrickLink данных
-        if (!window.brickLinkData || !window.brickLinkData.isLoaded) {
-            console.warn('BrickLink data not loaded, using fallback color name');
-            return `Color ${colorId}`; // Fallback к ID цвета
-        }
-        
-        try {
-            const colorData = await window.brickLinkData.getColorById(colorId);
-            return colorData ? colorData.name : `Color ${colorId}`;
-        } catch (error) {
-            console.error('Error getting color name:', error);
-            return `Color ${colorId}`; // Fallback к ID цвета
-        }
     }
 
     /**
@@ -588,13 +528,8 @@ class PileView {
                 }
                 
                 try {
-                    const parts = await window.brickLinkData.searchParts(query);
-                    console.log('Found parts:', parts.length);
-                    return parts.map(part => ({
-                        value: part.partId,
-                        label: `${part.partId} - ${part.name}`,
-                        category: 'Детали'
-                    }));
+                    // searchParts уже возвращает элементы в формате автокомплита
+                    return await window.brickLinkData.searchParts(query);
                 } catch (error) {
                     console.error('Error searching parts:', error);
                     return [];
@@ -676,7 +611,7 @@ class PileView {
             colorInput.style.borderColor = '';
             colorInput.style.backgroundColor = '';
             if (colorInfo) {
-                colorInfo.innerHTML = `<small>✅ Цвет "${selectedColorName}" доступен для этой детали</small>`;
+                colorInfo.innerHTML = `<small>✅ Цвет "${esc(selectedColorName)}" доступен для этой детали</small>`;
                 colorInfo.className = 'color-restriction-info success';
             }
         } else {
@@ -684,7 +619,7 @@ class PileView {
             colorInput.style.borderColor = 'var(--danger-color)';
             colorInput.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
             if (colorInfo) {
-                colorInfo.innerHTML = `<small>❌ Цвет "${selectedColorName}" недоступен для этой детали</small>`;
+                colorInfo.innerHTML = `<small>❌ Цвет "${esc(selectedColorName)}" недоступен для этой детали</small>`;
                 colorInfo.className = 'color-restriction-info error';
             }
         }

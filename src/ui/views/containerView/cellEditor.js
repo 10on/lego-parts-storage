@@ -33,7 +33,7 @@ class CellEditor {
         cell.classList.add('editing');
 
         this.setupCellEditorListeners(editor, cell, cellIndex);
-        this.view.renderer.handleCellImageFallbacks(editor);
+        window.imageLoader.applyFallbacks(editor);
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeCellEditor();
@@ -94,13 +94,13 @@ class CellEditor {
                             <form class="cell-editor-form">
                                 <div class="form-group">
                                     <label class="form-label">Деталь *</label>
-                                    <input type="text" class="form-input autocomplete-input" id="cell-part" value="${this.formatPartValue(cellData)}" placeholder="Начните вводить номер или название детали..." required>
+                                    <input type="text" class="form-input autocomplete-input" id="cell-part" value="${esc(this.formatPartValue(cellData))}" placeholder="Начните вводить номер или название детали..." required>
                                     <small class="form-help">Выберите деталь из каталога BrickLink</small>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">Цвет *</label>
-                                        <input type="text" class="form-input autocomplete-input" id="cell-color" value="${displayData?.color || ''}" placeholder="Сначала выберите деталь..." required disabled>
+                                        <input type="text" class="form-input autocomplete-input" id="cell-color" value="${esc(displayData?.color || '')}" placeholder="Сначала выберите деталь..." required disabled>
                                         <div class="color-restriction-info" id="cell-color-restriction-info" style="display: none;">
                                             <small>Доступные цвета для выбранной детали</small>
                                         </div>
@@ -108,7 +108,7 @@ class CellEditor {
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Количество (опционально)</label>
-                                        <input type="number" class="form-input" id="cell-quantity" value="${displayData?.quantity || ''}" placeholder="Оставить пустым если не важно" max="999">
+                                        <input type="number" class="form-input" id="cell-quantity" value="${esc(displayData?.quantity || '')}" placeholder="Оставить пустым если не важно" max="999">
                                     </div>
                                 </div>
                                 <div class="form-actions">
@@ -134,21 +134,21 @@ class CellEditor {
 
     async _renderExistingParts(existingParts) {
         const rows = await Promise.all(existingParts.map(async (item, index) => {
-            const colorName = await this.getColorName(item.colorId);
+            const colorName = await window.brickLinkData.resolveColorName(item.colorId);
             return `
-                <div class="existing-part-item" data-part-id="${item.partId}" data-color-id="${item.colorId}">
+                <div class="existing-part-item" data-part-id="${esc(item.partId)}" data-color-id="${esc(item.colorId)}">
                     <div class="part-image-small">
-                        ${item.image ? `<img src="${item.image}" alt="${item.partId}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
+                        ${item.image ? `<img src="${esc(item.image)}" alt="${esc(item.partId)}" class="part-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : ''}
                         <div class="part-thumbnail-placeholder" style="${item.image ? 'display: flex;' : ''}">
                             <div class="placeholder-icon-small">🧱</div>
                         </div>
                     </div>
                     <div class="part-info">
-                        <div class="part-id">${item.partId}</div>
-                        <div class="part-color">${colorName}</div>
+                        <div class="part-id">${esc(item.partId)}</div>
+                        <div class="part-color">${esc(colorName)}</div>
                     </div>
                     <div class="part-quantity">
-                        <input type="number" value="${item.quantity || ''}" max="999" class="quantity-input" data-index="${index}">
+                        <input type="number" value="${esc(item.quantity || '')}" max="999" class="quantity-input" data-index="${index}">
                     </div>
                     <div class="part-actions">
                         <button type="button" class="btn-edit-part" data-index="${index}" title="Редактировать деталь">✏️</button>
@@ -299,7 +299,7 @@ class CellEditor {
         }
 
         cell.innerHTML = this.view.renderer.renderCellContent(cellData);
-        this.view.renderer.handleCellImageFallbacks(cell);
+        window.imageLoader.applyFallbacks(cell);
         this._syncContainerToApp();
         await window.app?.autoSave();
     }
@@ -319,7 +319,7 @@ class CellEditor {
 
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.view.renderer.renderCellContent(updatedCellData);
-        this.view.renderer.handleCellImageFallbacks(cell);
+        window.imageLoader.applyFallbacks(cell);
         this._syncContainerToApp();
         await window.app?.autoSave();
 
@@ -376,7 +376,7 @@ class CellEditor {
         const newItem = {
             partId: partId.toUpperCase(),
             quantity,
-            colorId: await this.getColorId(color),
+            colorId: await window.brickLinkData.resolveColorId(color),
             image: await this.generateImageUrl(partId, color),
             lastUpdated: new Date().toISOString()
         };
@@ -392,7 +392,7 @@ class CellEditor {
 
         const updatedCellData = this.container.cells[cellIndex];
         cell.innerHTML = this.view.renderer.renderCellContent(updatedCellData);
-        this.view.renderer.handleCellImageFallbacks(cell);
+        window.imageLoader.applyFallbacks(cell);
         cell.classList.remove('empty', 'editing');
         cell.classList.add('filled');
 
@@ -459,7 +459,7 @@ class CellEditor {
         editor.querySelector('#tab-add-new')?.classList.add('active');
 
         editor.querySelector('#cell-part').value = partData.partId;
-        editor.querySelector('#cell-color').value = await this.getColorName(partData.colorId);
+        editor.querySelector('#cell-color').value = await window.brickLinkData.resolveColorName(partData.colorId);
         editor.querySelector('#cell-quantity').value = partData.quantity || 1;
 
         const updateImage = this.setupImageUpdate(editor);
@@ -481,7 +481,7 @@ class CellEditor {
 
         const cell = document.querySelector(`[data-cell-index="${cellIndex}"]`);
         this.setupExistingPartsListeners(editor, cell, cellIndex);
-        this.view.renderer.handleCellImageFallbacks(editor);
+        window.imageLoader.applyFallbacks(editor);
         this._updateTabCounter(editor, existingParts.length);
         this._updateModalHeader(editor, existingParts.length);
     }
@@ -527,29 +527,8 @@ class CellEditor {
     }
 
     async generateImageUrl(partId, color) {
-        const colorCode = await this.getColorId(color) || '1';
-        return `https://img.bricklink.com/ItemImage/PN/${colorCode}/${partId}.png`;
-    }
-
-    async getColorId(color) {
-        if (!color?.trim() || !window.brickLinkData?.isLoaded) return '0';
-        try {
-            const colorData = await window.brickLinkData.getColorByName(color);
-            return colorData ? colorData.id.toString() : '0';
-        } catch {
-            return '0';
-        }
-    }
-
-    async getColorName(colorId) {
-        if (!colorId || colorId === '0') return 'Default';
-        if (!window.brickLinkData?.isLoaded) return `Color ${colorId}`;
-        try {
-            const colorData = await window.brickLinkData.getColorById(colorId);
-            return colorData ? colorData.name : `Color ${colorId}`;
-        } catch {
-            return `Color ${colorId}`;
-        }
+        const colorCode = await window.brickLinkData.resolveColorId(color) || '1';
+        return window.imageLoader.getPartImageUrl(partId, colorCode);
     }
 
     setupImageUpdate(editor) {
@@ -565,9 +544,9 @@ class CellEditor {
                 return;
             }
             const partId = partValue.split(' - ')[0].trim();
-            const colorId = colorInput.value.trim() ? await this.getColorId(colorInput.value.trim()) : '0';
+            const colorId = colorInput.value.trim() ? await window.brickLinkData.resolveColorId(colorInput.value.trim()) : '0';
             try {
-                const imageUrl = this._getPartImageUrl(partId, colorId);
+                const imageUrl = window.imageLoader.getPartImageUrl(partId, colorId);
                 await this._loadPartImage(imageElement, placeholderElement, imageUrl);
             } catch {
                 this._showImagePlaceholder(imageElement, placeholderElement);
@@ -583,33 +562,11 @@ class CellEditor {
         return updateImage;
     }
 
-    _getPartImageUrl(partId, colorId) {
-        return `https://img.bricklink.com/ItemImage/PN/${colorId}/${partId}.png`;
-    }
-
     async _loadPartImage(imageElement, placeholderElement, imageUrl) {
-        if (window.imageLoader) {
-            return window.imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
-                showFallbackIndicator: true,
-                fallbackIndicatorText: '⚠️ Цвет',
-                onSuccess: (url, isFallback) => {
-                    if (isFallback) imageElement.classList.add('fallback-image');
-                }
-            });
-        }
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                imageElement.src = imageUrl;
-                imageElement.style.display = 'block';
-                placeholderElement.style.display = 'none';
-                resolve();
-            };
-            img.onerror = () => {
-                this._showImagePlaceholder(imageElement, placeholderElement);
-                resolve();
-            };
-            img.src = imageUrl;
+        return window.imageLoader.loadImageWithFallback(imageUrl, imageElement, placeholderElement, {
+            onSuccess: (url, isFallback) => {
+                if (isFallback) imageElement.classList.add('fallback-image');
+            }
         });
     }
 
@@ -681,14 +638,14 @@ class CellEditor {
             colorInput.style.borderColor = '';
             colorInput.style.backgroundColor = '';
             if (colorInfo) {
-                colorInfo.innerHTML = `<small>✅ Цвет "${selectedColorName}" доступен для этой детали</small>`;
+                colorInfo.innerHTML = `<small>✅ Цвет "${esc(selectedColorName)}" доступен для этой детали</small>`;
                 colorInfo.className = 'color-restriction-info success';
             }
         } else {
             colorInput.style.borderColor = 'var(--danger-color)';
             colorInput.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
             if (colorInfo) {
-                colorInfo.innerHTML = `<small>❌ Цвет "${selectedColorName}" недоступен для этой детали</small>`;
+                colorInfo.innerHTML = `<small>❌ Цвет "${esc(selectedColorName)}" недоступен для этой детали</small>`;
                 colorInfo.className = 'color-restriction-info error';
             }
         }

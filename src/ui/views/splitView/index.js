@@ -47,47 +47,12 @@ class SplitView {
         this.setupEventListeners();
         
         // Обрабатываем fallback изображения
-        this.handleSplitImageFallbacks();
+        window.imageLoader.applyFallbacks(document, '.cell-part-image[data-original-src]');
         
         // Настройка клик-системы после рендеринга
         setTimeout(() => {
             this.setupClickSystem();
         }, 100);
-    }
-
-    /**
-     * Обрабатывает fallback загрузку изображений в split view
-     */
-    handleSplitImageFallbacks() {
-        if (!window.imageLoader) return;
-
-        const images = document.querySelectorAll('.cell-part-image[data-original-src]');
-        images.forEach(img => {
-            const originalSrc = img.dataset.originalSrc;
-            if (originalSrc) {
-                // Проверяем, загрузилось ли изображение
-                const testImg = new Image();
-                testImg.onload = () => {
-                    // Изображение загрузилось успешно
-                    if (img.src !== originalSrc) {
-                        img.src = originalSrc;
-                    }
-                };
-                testImg.onerror = () => {
-                    // Изображение не загрузилось, пробуем fallback
-                    window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
-                        showFallbackIndicator: true,
-                        fallbackIndicatorText: '⚠️ Цвет',
-                        onSuccess: (url, isFallback) => {
-                            if (isFallback) {
-                                img.classList.add('fallback-image');
-                            }
-                        }
-                    });
-                };
-                testImg.src = originalSrc;
-            }
-        });
     }
 
     renderContainerPreview(container, side) {
@@ -106,7 +71,7 @@ class SplitView {
         
         return `
             <div class="container-preview-content">
-                <h4>${container.name}</h4>
+                <h4>${esc(container.name)}</h4>
                 <div class="container-stats">
                     <div class="stat">
                         <span class="stat-label">Размер:</span>
@@ -148,7 +113,7 @@ class SplitView {
                 const cell = cells[cellIndex];
                 
                 // Пропускаем ячейки, которые являются частью объединения (но не первой)
-                if (this.isCellPartOfMerge(cellIndex, cells)) {
+                if (Utils.isCellPartOfMerge(cellIndex, cells)) {
                     continue;
                 }
                 
@@ -172,7 +137,7 @@ class SplitView {
                     <div class="${cellClasses}" 
                          data-cell-index="${cellIndex}" 
                          data-side="${side}"
-                         data-container-id="${container.id}"
+                         data-container-id="${esc(container.id)}"
                          ${mergedStyles}>
                         ${this.renderCellContent(cell, cellIndex)}
                     </div>
@@ -206,10 +171,10 @@ class SplitView {
             const item = items[0];
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<div class="cell-content center-layout"><img src="${imageUrl}" alt="${item.name}" class="cell-part-image center" title="${item.name}" data-original-src="${imageUrl}"></div>`;
+                return `<div class="cell-content center-layout"><img src="${esc(imageUrl)}" alt="${esc(item.name)}" class="cell-part-image center" title="${esc(item.name)}" data-original-src="${esc(imageUrl)}"></div>`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${item.name}">${emoji}</div></div>`;
+                return `<div class="cell-content center-layout"><div class="cell-part-emoji center" title="${esc(item.name)}">${emoji}</div></div>`;
             }
         }
         
@@ -218,10 +183,10 @@ class SplitView {
             const position = this.getCornerPosition(index, items.length);
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})" data-original-src="${imageUrl}">`;
+                return `<img src="${esc(imageUrl)}" alt="${esc(item.name)}" class="cell-part-image corner-${position}" title="${esc(item.name)} (${esc(item.quantity)})" data-original-src="${esc(imageUrl)}">`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;
+                return `<div class="cell-part-emoji corner-${position}" title="${esc(item.name)}">${emoji}</div>`;
             }
         }).join('');
         
@@ -233,10 +198,10 @@ class SplitView {
             const position = this.getCornerPosition(index, 3);
             const imageUrl = item.image || item.img;
             if (imageUrl) {
-                return `<img src="${imageUrl}" alt="${item.name}" class="cell-part-image corner-${position}" title="${item.name} (${item.quantity})" data-original-src="${imageUrl}">`;
+                return `<img src="${esc(imageUrl)}" alt="${esc(item.name)}" class="cell-part-image corner-${position}" title="${esc(item.name)} (${esc(item.quantity)})" data-original-src="${esc(imageUrl)}">`;
             } else {
                 const emoji = this.getPartEmoji(item);
-                return `<div class="cell-part-emoji corner-${position}" title="${item.name}">${emoji}</div>`;
+                return `<div class="cell-part-emoji corner-${position}" title="${esc(item.name)}">${emoji}</div>`;
             }
         }).join('');
         
@@ -260,36 +225,9 @@ class SplitView {
         return '🧩';
     }
 
-    isCellPartOfMerge(cellIndex, cells) {
-        // Проверяем, является ли ячейка частью объединения (но не первой)
-        for (let i = 0; i < cells.length; i++) {
-            const cellData = cells[i];
-            if (cellData && cellData.type === 'merged') {
-                const { startIndex, cellCount } = cellData;
-                const endIndex = startIndex + cellCount - 1;
-                
-                // Если это не первая ячейка объединения, но входит в диапазон
-                if (cellIndex > startIndex && cellIndex <= endIndex) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     getMergedCellStyles(cellData, startIndex, rows, cols) {
-        const { direction, cellCount } = cellData;
-        
-        const startRow = Math.floor(startIndex / cols) + 1; // +1 для CSS Grid (начинается с 1)
-        const startCol = (startIndex % cols) + 1;
-        
-        if (direction === 'horizontal') {
-            // Горизонтальное объединение
-            return `style="grid-column: ${startCol} / ${startCol + cellCount}; grid-row: ${startRow} / ${startRow + 1};"`;
-        } else {
-            // Вертикальное объединение
-            return `style="grid-column: ${startCol} / ${startCol + 1}; grid-row: ${startRow} / ${startRow + cellCount};"`;
-        }
+        const { gridColumn, gridRow } = Utils.getMergedGridArea(cellData, startIndex, cols);
+        return `style="grid-column: ${gridColumn}; grid-row: ${gridRow};"`;
     }
 
     calculateContainerStats(container) {
@@ -354,9 +292,9 @@ class SplitView {
             const isSelected = this.selectedContainers.has(container.id);
             
             return `
-                <div class="container-card ${isSelected ? 'selected' : ''}" data-container-id="${container.id}">
-                    <h4>${container.name}</h4>
-                    <p>${container.type} • ${container.rows}×${container.cols}</p>
+                <div class="container-card ${isSelected ? 'selected' : ''}" data-container-id="${esc(container.id)}">
+                    <h4>${esc(container.name)}</h4>
+                    <p>${esc(container.type)} • ${container.rows}×${container.cols}</p>
                     <div class="container-stats">
                         Заполнено: ${stats.filledCells}/${stats.totalCells}
                     </div>
@@ -447,9 +385,9 @@ class SplitView {
                 <h4>Выберите контейнер для ${side === 'left' ? 'левой' : 'правой'} панели</h4>
                 <div class="containers-list">
                     ${containers.map(container => `
-                        <div class="container-option" data-container-id="${container.id}">
-                            <h5>${container.name}</h5>
-                            <p>${container.type} • ${container.rows}×${container.cols}</p>
+                        <div class="container-option" data-container-id="${esc(container.id)}">
+                            <h5>${esc(container.name)}</h5>
+                            <p>${esc(container.type)} • ${container.rows}×${container.cols}</p>
                             <div class="container-stats">
                                 <span>Заполнено: ${this.calculateContainerStats(container).filledCells}/${this.calculateContainerStats(container).totalCells}</span>
                             </div>
@@ -485,7 +423,7 @@ class SplitView {
             
             if (window.app) {
                 window.app.hideModal();
-                window.app.showNotification(`Контейнер "${container.name}" выбран для ${side === 'left' ? 'левой' : 'правой'} панели`, 'success');
+                window.app.showNotification(`Контейнер "${esc(container.name)}" выбран для ${side === 'left' ? 'левой' : 'правой'} панели`, 'success');
             }
         }
     }

@@ -42,9 +42,9 @@ class HomeView {
         const containerColor = container.color || '#e0e0e0';
 
         return `
-            <div class="container-card" data-container-id="${container.id}">
+            <div class="container-card" data-container-id="${esc(container.id)}">
                 <div class="container-card-header">
-                    <h3>${typeIcon} ${container.name}</h3>
+                    <h3>${typeIcon} ${esc(container.name)}</h3>
                     <div class="container-actions">
                         <button class="btn btn-sm btn-outline" data-action="clone" title="Клонировать">
                             📋
@@ -114,7 +114,7 @@ class HomeView {
         if (type === 'pile') {
             return `
                 <div class="container-pile-preview" 
-                     style="background-color: ${color};
+                     style="background-color: ${esc(color)};
                             border: 2px solid ${borderColor};">
                     <div class="pile-icon">📚</div>
                     <div class="pile-text">Куча деталей</div>
@@ -128,7 +128,7 @@ class HomeView {
             <div class="container-grid-preview" 
                  style="grid-template-columns: repeat(${cols}, 1fr); 
                         grid-template-rows: repeat(${rows}, 1fr);
-                        background-color: ${color};
+                        background-color: ${esc(color)};
                         border: 2px solid ${borderColor};">
         `;
         
@@ -242,7 +242,7 @@ class HomeView {
                 <form id="edit-container-form">
                     <div class="form-group">
                         <label class="form-label">Название контейнера</label>
-                        <input type="text" class="form-input" id="edit-container-name" value="${container.name}" required>
+                        <input type="text" class="form-input" id="edit-container-name" value="${esc(container.name)}" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Тип</label>
@@ -311,7 +311,7 @@ class HomeView {
         console.log('🔧 Показываем модальное окно...');
         const content = `
             <div class="clone-modal-content">
-                <p>Выберите, как клонировать контейнер "<strong>${container.name}</strong>":</p>
+                <p>Выберите, как клонировать контейнер "<strong>${esc(container.name)}</strong>":</p>
                 <div class="clone-options">
                     <label class="clone-option">
                         <input type="radio" name="clone-type" value="empty" checked>

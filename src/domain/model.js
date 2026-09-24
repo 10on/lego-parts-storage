@@ -3,16 +3,12 @@ class Container {
     constructor(data = {}) {
         // Сохраняем все поля (в т.ч. color, description), чтобы они не терялись при сохранении
         Object.assign(this, data);
-        this.id = data.id || Container.generateId();
+        this.id = data.id || Utils.generateId();
         this.rows = data.rows || 1;
         this.cols = data.cols || 1;
         this.cells = (data.cells || Array(this.rows * this.cols).fill(null)).map(Container.migrateCell);
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
-    }
-
-    static generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
     /**
@@ -52,7 +48,7 @@ class Container {
             data.cells = structuredClone(this.cells);
             data.cells.forEach(cell => {
                 cell?.items?.forEach(item => {
-                    if (item.id) item.id = Container.generateId();
+                    if (item.id) item.id = Utils.generateId();
                 });
             });
         } else {

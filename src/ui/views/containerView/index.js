@@ -34,7 +34,7 @@ class ContainerView {
         grid.innerHTML = '';
 
         for (let i = 0; i < rows * cols; i++) {
-            if (this.renderer.isCellPartOfMerge(i, cells)) continue;
+            if (Utils.isCellPartOfMerge(i, cells)) continue;
             grid.appendChild(this.createCell(i, cells[i]));
         }
 
@@ -59,7 +59,7 @@ class ContainerView {
             cell.classList.add('empty');
         }
 
-        this.renderer.handleCellImageFallbacks(cell);
+        window.imageLoader.applyFallbacks(cell);
         cell.addEventListener('click', (e) => this.handleCellClick(e, cell));
         cell.addEventListener('dblclick', (e) => this.handleCellDoubleClick(e, cell));
         this.dragDrop.setupCellDragDrop(cell, index);

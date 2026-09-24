@@ -22,7 +22,7 @@ class CellRenderer {
     renderSinglePart(partData) {
         return `
             <div class="cell-content">
-                ${partData.image ? `<img src="${partData.image}" alt="${partData.name}" class="cell-image" onerror="this.style.display='none'" data-original-src="${partData.image}">` : ''}
+                ${partData.image ? `<img src="${esc(partData.image)}" alt="${esc(partData.name)}" class="cell-image" onerror="this.style.display='none'" data-original-src="${esc(partData.image)}">` : ''}
             </div>
         `;
     }
@@ -37,7 +37,7 @@ class CellRenderer {
         const partsHtml = visibleParts.map(part => `
             <div class="cell-part">
                 <div class="part-image-container-small">
-                    ${part.image ? `<img src="${part.image}" alt="${part.name}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';" data-original-src="${part.image}">` : ''}
+                    ${part.image ? `<img src="${esc(part.image)}" alt="${esc(part.name)}" class="cell-image-small" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';" data-original-src="${esc(part.image)}">` : ''}
                     <div class="part-image-placeholder-small" style="${part.image ? 'display: flex;' : ''}">
                         <div class="placeholder-icon-tiny">🧱</div>
                     </div>
@@ -55,52 +55,9 @@ class CellRenderer {
         `;
     }
 
-    isCellPartOfMerge(cellIndex, cells) {
-        for (let i = 0; i < cells.length; i++) {
-            const cellData = cells[i];
-            if (cellData && cellData.type === 'merged') {
-                const { startIndex, cellCount } = cellData;
-                if (cellIndex > startIndex && cellIndex <= startIndex + cellCount - 1) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     applyMergedCellStyles(cell, cellData, startIndex, cols) {
-        const { direction, cellCount } = cellData;
-        const startRow = Math.floor(startIndex / cols) + 1;
-        const startCol = (startIndex % cols) + 1;
-
-        if (direction === 'horizontal') {
-            cell.style.gridColumn = `${startCol} / ${startCol + cellCount}`;
-            cell.style.gridRow = `${startRow} / ${startRow + 1}`;
-        } else {
-            cell.style.gridColumn = `${startCol} / ${startCol + 1}`;
-            cell.style.gridRow = `${startRow} / ${startRow + cellCount}`;
-        }
-    }
-
-    handleCellImageFallbacks(container) {
-        if (!window.imageLoader) return;
-        container.querySelectorAll('img[data-original-src]').forEach(img => {
-            const originalSrc = img.dataset.originalSrc;
-            if (!originalSrc) return;
-            const testImg = new Image();
-            testImg.onload = () => {
-                if (img.src !== originalSrc) img.src = originalSrc;
-            };
-            testImg.onerror = () => {
-                window.imageLoader.loadImageWithFallback(originalSrc, img, null, {
-                    showFallbackIndicator: true,
-                    fallbackIndicatorText: '⚠️ Цвет',
-                    onSuccess: (url, isFallback) => {
-                        if (isFallback) img.classList.add('fallback-image');
-                    }
-                });
-            };
-            testImg.src = originalSrc;
-        });
+        const { gridColumn, gridRow } = Utils.getMergedGridArea(cellData, startIndex, cols);
+        cell.style.gridColumn = gridColumn;
+        cell.style.gridRow = gridRow;
     }
 }
